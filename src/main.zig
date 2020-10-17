@@ -37,7 +37,7 @@ pub fn accumulate(
     var i: usize = 0;
     var totalLength: usize = iterable.len;
     var ans  = allocat.alloc(@typeInfo(@TypeOf(func)).Fn.return_type.?, iterable.len) catch unreachable;
-    errdefer allocat.destroy(ans);
+    errdefer allocat.destroy(ans.ptr);
     
     if (init) | int | {
         ans[i] = init.?;
