@@ -76,14 +76,14 @@ test "Iterator" {
 
 }
 
-pub fn accumulator(
+pub fn accumulate(
     allocat: *std.mem.Allocator,
     comptime func: anytype, 
     iterable: []@typeInfo(@TypeOf(func)).Fn.args[0].arg_type.?,
     comptime init: @typeInfo(@TypeOf(func)).Fn.args[0].arg_type.?
 ) Iterator(@typeInfo(@TypeOf(func)).Fn.return_type.?) {
     const RType = @typeInfo(@TypeOf(func)).Fn.return_type.?;
-    var ans: []u8  = allocat.alloc(u8, iterable.len) catch unreachable;
+    var ans: []RType  = allocat.alloc(RType, iterable.len) catch unreachable;
     defer allocat.destroy(ans.ptr);
     for (ans) | _, i | { ans[i] = 0;}
     
@@ -94,35 +94,35 @@ pub fn accumulator(
         ans[i] =  func(ans[i-1], iterable[i]);
     }
 
-    return Iterator(u8).init(allocat, ans);
+    return Iterator(RType).init(allocat, ans);
 }
 
-fn add(a: u8, b:u8) u8 {
+fn add(a: u32, b:u32) u32 {
     return a + b;
 }
 
-fn mul(a:u8, b:u8) u8 {
+fn mul(a:u32, b:u32) u32 {
     return a * b;
 }
 
-test "Accumulator" {
-    var A = [_]u8{1, 2, 4};
-    var ans1 = [_]u8{1, 3, 7};
-    var ans2 = [_]u8{0, 0, 0};
-    var ans3 = [_]u8{1, 2, 8};
+test "Accumulate" {
+    var A = [_]u32{1, 2, 4};
+    var ans1 = [_]u32{1, 3, 7};
+    var ans2 = [_]u32{0, 0, 0};
+    var ans3 = [_]u32{1, 2, 8};
 
-    var res = accumulator(tallocator, add, &A, 0);
+    var res = accumulate(tallocator, add, &A, 0);
     defer res.deinit();
 
-    var res2 = accumulator(tallocator, mul, &A, 0);
+    var res2 = accumulate(tallocator, mul, &A, 0);
     defer res2.deinit();
 
-    var res3 = accumulator(tallocator, mul, &A, 1);
+    var res3 = accumulate(tallocator, mul, &A, 1);
     defer res3.deinit();
 
-    printTest(u8, &res, &ans1);
-    printTest(u8, &res2, &ans2);
-    printTest(u8, &res3, &ans3);
+    printTest(u32, &res, &ans1);
+    printTest(u32, &res2, &ans2);
+    printTest(u32, &res3, &ans3);
 
 }
 
@@ -132,7 +132,7 @@ test "Accumulator" {
 //     comptime iterables: [][]@typeInfo(@TypeOf(func)).Fn.args[0].arg_type.? )
 // @typeInfo(@TypeOf(func)).Fn.return_type.? {
 //     var totalLength = 0;
-//     inline for (iterables) | iterable | {
+//     for (iterables) | iterable | {
 //         totalLength += iterable.len;
 //     }
 
@@ -155,5 +155,5 @@ test "Accumulator" {
 //         [_]i32{1, 2}, 
 //         [_]i32{3, 4}
 //     };
-//     assertEqual(chain(std.testing.allocator, addOne, &A), []i32{2,3,4,5});
+//     assertEqual(chain(tallocator, addOne, &A), []i32{2,3,4,5});
 // }
