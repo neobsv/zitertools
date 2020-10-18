@@ -39,6 +39,15 @@ pub fn Iterator(comptime T: type) type {
     };
 }
 
+fn printTest(comptime T: type, iter: *Iterator(T), ans: []T) void{
+    var i: usize = 0;
+    while (iter.next()) | item | {
+        assertEqual(ans[i], item.*);
+        i += 1;
+    }
+    warn("\r\n", .{});
+}
+
 test "Iterator" {
 
     var A: []u8 = tallocator.alloc(u8, 10) catch unreachable;
@@ -51,13 +60,7 @@ test "Iterator" {
     var iter = Iterator(u8).init(tallocator, A);
     defer iter.deinit();
 
-    i = 0;
-    while (iter.next()) | item | {
-        assertEqual(A[i], item.*);
-        i += 1;
-    }
-
-    warn("\r\n", .{});
+    printTest(u8, &iter, A);
 
     var B = std.ArrayList(u8).init(tallocator);
     defer B.deinit();
@@ -69,11 +72,7 @@ test "Iterator" {
     var iter2 = Iterator(u8).init(tallocator, B.items);
     defer iter2.deinit();
 
-    i = 0;
-    while (iter2.next()) | item2 | {
-        assertEqual(B.items[i], item2.*);
-        i += 1;
-    }
+    printTest(u8, &iter2, B.items);
 
 }
 
@@ -121,26 +120,10 @@ test "Accumulator" {
     var res3 = accumulator(tallocator, mul, &A, 1);
     defer res3.deinit();
 
-    var i: usize = 0;
-    while( res.next() ) | item | {
-        assertEqual(ans1[i], item.*);
-        i += 1;
-    }
-    warn ("\r\n" , .{});
+    printTest(u8, &res, &ans1);
+    printTest(u8, &res2, &ans2);
+    printTest(u8, &res3, &ans3);
 
-    i = 0;
-    while( res2.next() ) | item | {
-        assertEqual(ans2[i], item.*);
-        i += 1;
-    }
-    warn ("\r\n" , .{});
-
-    i = 0;
-    while( res3.next() ) | item | {
-        assertEqual(ans3[i], item.*);
-        i += 1;
-    }
-    warn ("\r\n" , .{});
 }
 
 
