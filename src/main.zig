@@ -1,68 +1,107 @@
 const std = @import("std");
 const tallocator = std.testing.allocator;
 const warn = std.debug.warn;
-const exact = std.mem.Allocator.Exact;
 const assertEqual = std.testing.expectEqual;
 
-pub const Iterator = struct {
-    allocator: *std.mem.Allocator,
-    iterable: anytype,
-    index: usize,
-    length: usize,
+pub fn Iterator(comptime T: type) type {
+    return struct {
+        allocator: *std.mem.Allocator,
+        iterable: []T,
+        index: usize = 0,
+        len: usize,
 
-    const Self = @This();
+        const Self = @This();
 
-    pub fn next(it: *Self) *@TypeOf(iterable[0]) {
-        defer it.allocator.destroy(iterable);
-
-        if (it.length == 0) return undefined;
-
-        while ( it.index < it.length ) : ( it.index += 1 ) {
-            const item = it.iterable[it.index];
-            return item;
+        fn incr(it: *Self) void {
+            it.index += 1;
         }
 
-        return undefined;
+        pub fn next(it: *Self) ?*const T {
+            if(it.index < it.len) {
+                defer it.incr();
+                return &it.iterable[it.index];
+            }
+            return null;
+        }
+
+        pub fn init(alloc: *std.mem.Allocator, iter: []T) Self {
+            var temp: []T = alloc.dupe(T, iter) catch unreachable;
+            return Self{
+                .allocator = alloc,
+                .iterable = temp,
+                .len = iter.len
+            };
+        }
+
+        pub fn deinit(it: *Self) void {
+            it.allocator.free(it.iterable);
+        }
+    };
+}
+
+
+test "Iterator" {
+
+    var A: []u8 = tallocator.alloc(u8, 10) catch unreachable;
+    defer tallocator.destroy(A.ptr);
+
+    var i: u8 = 0;
+    while ( i < 10 ) : ( i += 1 ) {
+        A[i] = i;
+    } 
+    var iter = Iterator(u8).init(tallocator, A);
+    defer iter.deinit();
+
+    i = 0;
+    while (iter.next()) | item | {
+        assertEqual(A[i], item.*);
+        i += 1;
     }
 
-};
+    warn("\r\n", .{});
 
+    var B = std.ArrayList(u8).init(tallocator);
+    defer B.deinit();
+
+    i =  0;
+    while ( i < 10 ) : ( i += 1 ) {
+        _ = try B.append(i*2);
+    } 
+    var iter2 = Iterator(u8).init(tallocator, B.items);
+    defer iter2.deinit();
+
+    i = 0;
+    while (iter2.next()) | item2 | {
+        assertEqual(B.items[i], item2.*);
+        i += 1;
+    }
+
+}
 
 pub fn accumulate(
     allocat: *std.mem.Allocator,
     func: anytype, 
     iterable: []@typeInfo(@TypeOf(func)).Fn.args[0].arg_type.?,
-    init: ?@typeInfo(@TypeOf(func)).Fn.return_type.?
-) *[]@typeInfo(@TypeOf(func)).Fn.return_type.?  {
-    var i: usize = 0;
-    var totalLength: usize = iterable.len;
-    var ans  = allocat.alloc(@typeInfo(@TypeOf(func)).Fn.return_type.?, iterable.len) catch unreachable;
-    errdefer allocat.destroy(ans.ptr);
+    init: ?@typeInfo(@TypeOf(func)).Fn.args[0].arg_type.?
+) Iterator(@typeInfo(@TypeOf(func)).Fn.return_type.?) {
+    const RType = @typeInfo(@TypeOf(func)).Fn.return_type.?;
+    var ans: []RType  = allocat.alloc(RType, iterable.len) catch unreachable;
+    defer allocat.destroy(ans.ptr);
     
+    var i: usize = 0;
     if (init) | int | {
         ans[i] = init.?;
     } else {
         ans[i] = iterable[0];
     }
     i += 1;
-    while (i < totalLength) : ( i+=1 ) {
-        ans[i] = func(ans[i], iterable[i]);
+    while (i < iterable.len) : ( i+=1 ) {
+        ans[i] = ans[i] + iterable[i];
+        warn("ans: {}", .{ans[i]});
     }
 
-    return &ans;
+    return Iterator(RType).init(allocat, ans);
 }
-
-// pub fn accumulate(comptime func: anytype, 
-//     iterable: []@typeInfo(@TypeOf(func)).Fn.args[0].arg_type.?,
-//     comptime init: @typeInfo(@TypeOf(func)).Fn.return_type.? )
-// @typeInfo(@TypeOf(func)).Fn.return_type.? {
-//     var ans = init;
-//     for (iterable) | item | {
-//         ans = func(ans, item);
-//     }
-//     return ans;
-// }
-
 
 pub fn add (a: u8, b: u8) u8 { 
     return a + b; 
@@ -70,15 +109,20 @@ pub fn add (a: u8, b: u8) u8 {
 pub fn mul (a: u8, b: u8) u8 { 
     return a * b; 
 }
-test "Accumulate" {
+
+test "Accumulator" {
     var A = [_]u8{1, 2, 4};
-    var res = accumulate(tallocator, add, &A, 0);
-    warn ("item: {}" , .{res});
-    tallocator.destroy(res.ptr);
-    //tallocator.destroy(res);
+    var ans = [_]u8{1, 3, 7};
+    var res = accumulate(tallocator, add, A, 0);
+    defer res.deinit();
 
-    //tallocator.destroy(res);
-
+    var i: usize = 0;
+    while( res.next() ) | item | {
+        warn("item: {}\n", .{item.*});
+        assertEqual(A[i], item.*);
+        i += 1;
+    }
+    warn ("\r\n" , .{});
 
     // while (accumulate(add, &A, 0).next()) | item | {
     //     warn("item: {}\r\n", .{item});
