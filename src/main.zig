@@ -39,7 +39,6 @@ pub fn Iterator(comptime T: type) type {
     };
 }
 
-
 test "Iterator" {
 
     var A: []u8 = tallocator.alloc(u8, 10) catch unreachable;
@@ -78,70 +77,72 @@ test "Iterator" {
 
 }
 
-pub fn accumulate(
+pub fn accumulator(
     allocat: *std.mem.Allocator,
-    func: anytype, 
+    comptime func: anytype, 
     iterable: []@typeInfo(@TypeOf(func)).Fn.args[0].arg_type.?,
-    init: ?@typeInfo(@TypeOf(func)).Fn.args[0].arg_type.?
+    comptime init: @typeInfo(@TypeOf(func)).Fn.args[0].arg_type.?
 ) Iterator(@typeInfo(@TypeOf(func)).Fn.return_type.?) {
     const RType = @typeInfo(@TypeOf(func)).Fn.return_type.?;
-    var ans: []RType  = allocat.alloc(RType, iterable.len) catch unreachable;
+    var ans: []u8  = allocat.alloc(u8, iterable.len) catch unreachable;
     defer allocat.destroy(ans.ptr);
+    for (ans) | _, i | { ans[i] = 0;}
     
     var i: usize = 0;
-    if (init) | int | {
-        ans[i] = init.?;
-    } else {
-        ans[i] = iterable[0];
-    }
+    ans[0] = func(init, iterable[0]);
     i += 1;
-    while (i < iterable.len) : ( i+=1 ) {
-        ans[i] = ans[i] + iterable[i];
-        warn("ans: {}", .{ans[i]});
+    while (i < iterable.len) : ( i += 1 ) {
+        ans[i] =  func(ans[i-1], iterable[i]);
     }
 
-    return Iterator(RType).init(allocat, ans);
+    return Iterator(u8).init(allocat, ans);
 }
 
-pub fn add (a: u8, b: u8) u8 { 
-    return a + b; 
+fn add(a: u8, b:u8) u8 {
+    return a + b;
 }
-pub fn mul (a: u8, b: u8) u8 { 
-    return a * b; 
+
+fn mul(a:u8, b:u8) u8 {
+    return a * b;
 }
 
 test "Accumulator" {
     var A = [_]u8{1, 2, 4};
-    var ans = [_]u8{1, 3, 7};
-    var res = accumulate(tallocator, add, A, 0);
+    var ans1 = [_]u8{1, 3, 7};
+    var ans2 = [_]u8{0, 0, 0};
+    var ans3 = [_]u8{1, 2, 8};
+
+    var res = accumulator(tallocator, add, &A, 0);
     defer res.deinit();
+
+    var res2 = accumulator(tallocator, mul, &A, 0);
+    defer res2.deinit();
+
+    var res3 = accumulator(tallocator, mul, &A, 1);
+    defer res3.deinit();
 
     var i: usize = 0;
     while( res.next() ) | item | {
-        warn("item: {}\n", .{item.*});
-        assertEqual(A[i], item.*);
+        assertEqual(ans1[i], item.*);
         i += 1;
     }
     warn ("\r\n" , .{});
 
-    // while (accumulate(add, &A, 0).next()) | item | {
-    //     warn("item: {}\r\n", .{item});
-    // }
+    i = 0;
+    while( res2.next() ) | item | {
+        assertEqual(ans2[i], item.*);
+        i += 1;
+    }
+    warn ("\r\n" , .{});
 
-    // while (accumulate(mul, &A, 0).next()) | item | {
-    //     warn("item: {}\r\n", .{item});
-    // }
-
-    // while (accumulate(mul, &A, 1).next()) | item | {
-    //     warn("item: {}\r\n", .{item});
-    // }
-
-    // var A = [_]u8{1, 2, 4};
-    // assertEqual(accumulate(add, &A, 0), 7);
-    // assertEqual(accumulate(mul, &A, 0), 0);
-    // assertEqual(accumulate(mul, &A, 1), 8);
-
+    i = 0;
+    while( res3.next() ) | item | {
+        assertEqual(ans3[i], item.*);
+        i += 1;
+    }
+    warn ("\r\n" , .{});
 }
+
 
 // pub fn chain(comptime allocator: *std.mem.Allocator,
 //     comptime func: anytype,
