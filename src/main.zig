@@ -115,9 +115,8 @@ pub fn map(
     defer allocat.destroy(ans.ptr);
     for (ans) | _, i | { ans[i] = 0;}
     
-    var i: usize = 0;
-    while (i < iterable.len) : ( i += 1 ) {
-        ans[i] =  func(iterable[i]);
+    for(iterable) | item, i | {
+        ans[i] =  func(item);
     }
 
     return Iterator(RType).init(allocat, ans);
@@ -148,11 +147,10 @@ pub fn filter(
     defer allocat.destroy(ans.ptr);
     for (ans) | _, i | { ans[i] = 0;}
     
-    var i: usize = 0;
     var j: usize = 0;
-    while (i < iterable.len) : ( i += 1 ) {
-        if (func(iterable[i]) == true) {
-            ans[j] = iterable[i];
+    for (iterable) | item, i | {
+        if (func(item) == true) {
+            ans[j] = item;
             j += 1;
         }
     }
@@ -234,14 +232,17 @@ test "Accumulate" {
 
 // pub fn chain(comptime allocator: *std.mem.Allocator,
 //     comptime func: anytype,
-//     comptime iterables: [][]@typeInfo(@TypeOf(func)).Fn.args[0].arg_type.? )
-// @typeInfo(@TypeOf(func)).Fn.return_type.? {
+//     iterables: [_][]@typeInfo(@TypeOf(func)).Fn.args[0].arg_type.?
+// ) @typeInfo(@TypeOf(func)).Fn.return_type.? {
 //     var totalLength = 0;
 //     for (iterables) | iterable | {
 //         totalLength += iterable.len;
 //     }
+//     const RType = @typeInfo(@TypeOf(func)).Fn.return_type.?;
+//     var ans: []RType  = allocat.alloc(RType, totalLength) catch unreachable;
+//     defer allocat.destroy(ans.ptr);
+//     for (ans) | _, i | { ans[i] = 0;}
 
-//     var ans  = try allocator.alloc(@typeInfo(@TypeOf(func)).Fn.return_type.?, totalLength);
 //     var index = 0;
 //     inline for (iterables) | iterable | {
 //         inline for (iterable) | item | {
@@ -249,16 +250,21 @@ test "Accumulate" {
 //             index += 1; 
 //         }
 //     }
-//     return ans;
+//     return Iterator(RType).init(allocat, ans);
 // }
 
-// fn addOne(a: u8) u8 {
+// fn addOne8(a: u8) u8 {
 //     return a+1;
 // }
 // test "Chain" {
-//     comptime var A = [_][]i32{ 
+//     var A = [_][2]i32{ 
 //         [_]i32{1, 2}, 
 //         [_]i32{3, 4}
 //     };
-//     assertEqual(chain(tallocator, addOne, &A), []i32{2,3,4,5});
+
+//     var ans = [_]i32{2,3,4,5};
+//     var res = chain(tallocator, addOne8, &A);
+//     defer res.deinit();
+
+//     printTest(i32, &res, &ans);
 // }

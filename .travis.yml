@@ -1,0 +1,19 @@
+language : shell
+
+os:
+  - osx
+  - linux
+
+addons:
+  snaps:
+  - name: zig
+    classic: true
+    channel: beta
+  homebrew:
+    update: true
+    packages:
+    - zig
+
+
+script: 
+  - zig test src/main.zig
