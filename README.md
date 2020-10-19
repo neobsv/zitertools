@@ -10,6 +10,10 @@ Suggestions and contributions are welcome.
 
 ## Generic Iterator
 
+## Min
+
+## Max
+
 ## Reduce
 
 ## Map
@@ -17,3 +21,5 @@ Suggestions and contributions are welcome.
 ## Filter
 
 ## Accumulate
+
+## Chain
