@@ -110,8 +110,8 @@ pub fn map(
     comptime func: anytype, 
     iterable: []@typeInfo(@TypeOf(func)).Fn.args[0].arg_type.?
 ) Iterator(@typeInfo(@TypeOf(func)).Fn.args[0].arg_type.?) {
-    const RType = @typeInfo(@TypeOf(func)).Fn.args[0].arg_type.?;
-    var ans: []RType  = allocat.alloc(RType, iterable.len) catch unreachable;
+    const rtype = @typeInfo(@TypeOf(func)).Fn.args[0].arg_type.?;
+    var ans: []rtype  = allocat.alloc(rtype, iterable.len) catch unreachable;
     defer allocat.destroy(ans.ptr);
     for (ans) | _, i | { ans[i] = 0;}
     
@@ -119,7 +119,7 @@ pub fn map(
         ans[i] =  func(item);
     }
 
-    return Iterator(RType).init(allocat, ans);
+    return Iterator(rtype).init(allocat, ans);
 }
 
 fn addOne(a: u8) u8 {
@@ -142,8 +142,8 @@ pub fn filter(
     comptime func: anytype, 
     iterable: []@typeInfo(@TypeOf(func)).Fn.args[0].arg_type.?
 ) Iterator(@typeInfo(@TypeOf(func)).Fn.args[0].arg_type.?) {
-    const RType = @typeInfo(@TypeOf(func)).Fn.args[0].arg_type.?;
-    var ans: []RType  = allocat.alloc(RType, iterable.len) catch unreachable;
+    const rtype = @typeInfo(@TypeOf(func)).Fn.args[0].arg_type.?;
+    var ans: []rtype  = allocat.alloc(rtype, iterable.len) catch unreachable;
     defer allocat.destroy(ans.ptr);
     for (ans) | _, i | { ans[i] = 0;}
     
@@ -158,7 +158,7 @@ pub fn filter(
     _ = allocat.shrink(ans, j);
     ans.len = j;
 
-    return Iterator(RType).init(allocat, ans);
+    return Iterator(rtype).init(allocat, ans);
 }
 
 fn isLessThan10(a: u8) bool {
@@ -170,7 +170,7 @@ fn isLessThan10(a: u8) bool {
 
 test "Filter" {
     var A = [_]u8{1, 'a', 2, 'b', 3, 'c', 'd', 'e'};
-    var ans = [_]u8{1, 2, 3, 0, 0, 0, 0, 0};
+    var ans = [_]u8{1, 2, 3};
 
     var res = filter(tallocator, isLessThan10, &A);
     defer res.deinit();
@@ -185,8 +185,8 @@ pub fn accumulate(
     iterable: []@typeInfo(@TypeOf(func)).Fn.args[0].arg_type.?,
     comptime init: @typeInfo(@TypeOf(func)).Fn.args[0].arg_type.?
 ) Iterator(@typeInfo(@TypeOf(func)).Fn.return_type.?) {
-    const RType = @typeInfo(@TypeOf(func)).Fn.return_type.?;
-    var ans: []RType  = allocat.alloc(RType, iterable.len) catch unreachable;
+    const rtype = @typeInfo(@TypeOf(func)).Fn.return_type.?;
+    var ans: []rtype  = allocat.alloc(rtype, iterable.len) catch unreachable;
     defer allocat.destroy(ans.ptr);
     for (ans) | _, i | { ans[i] = 0;}
     
@@ -197,7 +197,7 @@ pub fn accumulate(
         ans[i] =  func(ans[i-1], iterable[i]);
     }
 
-    return Iterator(RType).init(allocat, ans);
+    return Iterator(rtype).init(allocat, ans);
 }
 
 fn add(a: u32, b:u32) u32 {
@@ -226,5 +226,118 @@ test "Accumulate" {
     printTest(u32, &res, &ans1);
     printTest(u32, &res2, &ans2);
     printTest(u32, &res3, &ans3);
+    warn("\r\n", .{});
+}
+
+pub fn chain(
+    allocat: *std.mem.Allocator,
+    comptime func: anytype,
+    iterables: []const []const @typeInfo(@TypeOf(func)).Fn.args[0].arg_type.?
+) Iterator(@typeInfo(@TypeOf(func)).Fn.return_type.?) {
+    var totalLength: usize = 0;
+    for (iterables) | iterable | { totalLength += iterable.len; }
+    const rtype = @typeInfo(@TypeOf(func)).Fn.return_type.?;
+    var ans: []rtype  = allocat.alloc(rtype, totalLength) catch unreachable;
+    defer allocat.destroy(ans.ptr);
+    for (ans) | _, i | { ans[i] = 0;}
+
+    var index: usize = 0;
+    for (iterables) | iterable | {
+        for (iterable) | item | {
+            ans[index] = func(item);
+            index += 1; 
+        }
+    }
+    return Iterator(rtype).init(allocat, ans);
+}
+
+fn addOne8(a: i32) i32 {
+    return a+1;
+}
+
+test "Chain" {
+    var A = &[_][]const i32{ 
+        &[_]i32{1, 2}, 
+        &[_]i32{3, 4}
+    };
+
+    var ans = [_]i32{2,3,4,5};
+    var res = chain(tallocator, addOne8, A);
+    defer res.deinit();
+
+    printTest(i32, &res, &ans);
+
+    warn("\r\n", .{});
+}
+
+pub fn min(
+    allocat: *std.mem.Allocator,
+    comptime func: anytype,
+    iterables: []const []const @typeInfo(@TypeOf(func)).Fn.args[0].arg_type.?
+) @typeInfo(@TypeOf(func)).Fn.args[0].arg_type.? {
+    const rtype = @typeInfo(@TypeOf(func)).Fn.args[0].arg_type.?;
+
+    var min_value: rtype = iterables[0][0];
+    for (iterables) | iterable | {
+        for (iterable) | item | {
+            if ( compareFnMin(item, min_value) == true ) {
+                min_value = item;
+            }
+        }
+    }
+    return min_value;
+}
+
+fn compareFnMin(a: i32, b: i32) bool {
+    if (a < b) {
+        return true;
+    }
+    return false;
+}
+
+test "Min" {
+    var A = &[_][]const i32{ 
+        &[_]i32{1, 2}, 
+        &[_]i32{3, 4}
+    };
+
+    assertEqual(min(tallocator, compareFnMin, A), 1);
+
+    warn("\r\n", .{});
+}
+
+pub fn max(
+    allocat: *std.mem.Allocator,
+    comptime func: anytype,
+    iterables: []const []const @typeInfo(@TypeOf(func)).Fn.args[0].arg_type.?
+) @typeInfo(@TypeOf(func)).Fn.args[0].arg_type.? {
+    const rtype = @typeInfo(@TypeOf(func)).Fn.args[0].arg_type.?;
+
+    var max_value: rtype = iterables[0][0];
+    for (iterables) | iterable | {
+        for (iterable) | item | {
+            if ( compareFnMax(item, max_value) == true ) {
+                max_value = item;
+            }
+        }
+    }
+    return max_value;
+}
+
+fn compareFnMax(a: i32, b: i32) bool {
+    if (a > b) {
+        return true;
+    }
+    return false;
+}
+
+test "Max" {
+    var A = &[_][]const i32{ 
+        &[_]i32{1, 2}, 
+        &[_]i32{3, 4}
+    };
+
+    assertEqual(max(tallocator, compareFnMax, A), 4);
+
     warn("\r\n", .{});
 }
