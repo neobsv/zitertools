@@ -34,7 +34,7 @@ test "Reduce" {
 pub fn Iterator(comptime T: type) type {
     return struct {
         allocator: *std.mem.Allocator,
-        iterable: []T,
+        items: []const T,
         index: usize = 0,
         len: usize,
 
@@ -47,7 +47,7 @@ pub fn Iterator(comptime T: type) type {
         pub fn next(it: *Self) ?*const T {
             if(it.index < it.len) {
                 defer it.incr();
-                return &it.iterable[it.index];
+                return &it.items[it.index];
             }
             return null;
         }
@@ -56,13 +56,13 @@ pub fn Iterator(comptime T: type) type {
             var temp: []T = alloc.dupe(T, iter) catch unreachable;
             return Self{
                 .allocator = alloc,
-                .iterable = temp,
+                .items = temp,
                 .len = iter.len
             };
         }
 
         pub fn deinit(it: *Self) void {
-            it.allocator.free(it.iterable);
+            it.allocator.free(it.items);
         }
     };
 }
@@ -113,7 +113,6 @@ pub fn map(
     const rtype = @typeInfo(@TypeOf(func)).Fn.args[0].arg_type.?;
     var ans: []rtype  = allocat.alloc(rtype, iterable.len) catch unreachable;
     defer allocat.destroy(ans.ptr);
-    for (ans) | _, i | { ans[i] = 0;}
     
     for(iterable) | item, i | {
         ans[i] =  func(item);
@@ -145,7 +144,6 @@ pub fn filter(
     const rtype = @typeInfo(@TypeOf(func)).Fn.args[0].arg_type.?;
     var ans: []rtype  = allocat.alloc(rtype, iterable.len) catch unreachable;
     defer allocat.destroy(ans.ptr);
-    for (ans) | _, i | { ans[i] = 0;}
     
     var j: usize = 0;
     for (iterable) | item, i | {
@@ -188,7 +186,6 @@ pub fn accumulate(
     const rtype = @typeInfo(@TypeOf(func)).Fn.return_type.?;
     var ans: []rtype  = allocat.alloc(rtype, iterable.len) catch unreachable;
     defer allocat.destroy(ans.ptr);
-    for (ans) | _, i | { ans[i] = 0;}
     
     var i: usize = 0;
     ans[0] = func(init, iterable[0]);
@@ -239,7 +236,6 @@ pub fn chain(
     const rtype = @typeInfo(@TypeOf(func)).Fn.return_type.?;
     var ans: []rtype  = allocat.alloc(rtype, totalLength) catch unreachable;
     defer allocat.destroy(ans.ptr);
-    for (ans) | _, i | { ans[i] = 0;}
 
     var index: usize = 0;
     for (iterables) | iterable | {
@@ -280,7 +276,7 @@ pub fn min(
     var min_value: rtype = iterables[0][0];
     for (iterables) | iterable | {
         for (iterable) | item | {
-            if ( compareFnMin(item, min_value) == true ) {
+            if ( func(item, min_value) == true ) {
                 min_value = item;
             }
         }
@@ -300,9 +296,7 @@ test "Min" {
         &[_]i32{1, 2}, 
         &[_]i32{3, 4}
     };
-
     assertEqual(min(tallocator, compareFnMin, A), 1);
-
     warn("\r\n", .{});
 }
 
@@ -311,17 +305,7 @@ pub fn max(
     comptime func: anytype,
     iterables: []const []const @typeInfo(@TypeOf(func)).Fn.args[0].arg_type.?
 ) @typeInfo(@TypeOf(func)).Fn.args[0].arg_type.? {
-    const rtype = @typeInfo(@TypeOf(func)).Fn.args[0].arg_type.?;
-
-    var max_value: rtype = iterables[0][0];
-    for (iterables) | iterable | {
-        for (iterable) | item | {
-            if ( compareFnMax(item, max_value) == true ) {
-                max_value = item;
-            }
-        }
-    }
-    return max_value;
+    return min(allocat, func, iterables);
 }
 
 fn compareFnMax(a: i32, b: i32) bool {
@@ -336,8 +320,76 @@ test "Max" {
         &[_]i32{1, 2}, 
         &[_]i32{3, 4}
     };
-
     assertEqual(max(tallocator, compareFnMax, A), 4);
+    warn("\r\n", .{});
+}
 
+pub fn filterfalse(
+    allocat: *std.mem.Allocator,
+    comptime func: anytype, 
+    iterable: []@typeInfo(@TypeOf(func)).Fn.args[0].arg_type.?
+) Iterator(@typeInfo(@TypeOf(func)).Fn.args[0].arg_type.?) {
+    const rtype = @typeInfo(@TypeOf(func)).Fn.args[0].arg_type.?;
+    var ans: []rtype  = allocat.alloc(rtype, iterable.len) catch unreachable;
+    defer allocat.destroy(ans.ptr);
+    
+    var j: usize = 0;
+    for (iterable) | item, i | {
+        if (func(item) == false) {
+            ans[j] = item;
+            j += 1;
+        }
+    }
+
+    _ = allocat.shrink(ans, j);
+    ans.len = j;
+
+    return Iterator(rtype).init(allocat, ans);
+}
+
+test "FilterFalse" {
+    var A = [_]u8{1, 'a', 2, 'b', 3, 'c', 'd', 'e'};
+    var ans = [_]u8{'a', 'b', 'c', 'd', 'e'};
+
+    var res = filterfalse(tallocator, isLessThan10, &A);
+    defer res.deinit();
+
+    printTest(u8, &res, &ans);
+    warn("\r\n", .{});
+}
+
+pub fn dropwhile(
+    allocat: *std.mem.Allocator,
+    comptime func: anytype, 
+    iterable: []@typeInfo(@TypeOf(func)).Fn.args[0].arg_type.?
+) Iterator(@typeInfo(@TypeOf(func)).Fn.args[0].arg_type.?) {
+    var totalLength: usize = iterable.len;
+    const rtype = @typeInfo(@TypeOf(func)).Fn.args[0].arg_type.?;
+    var ans: []rtype  = allocat.alloc(rtype, totalLength) catch unreachable;
+    defer allocat.destroy(ans.ptr);
+
+    var i: usize = 0;
+    while ( func(iterable[i]) == true ) : ( i += 1 ) {}
+
+    var j: usize = 0;
+    while ( i < totalLength ) : ( j += 1 ) {
+        ans[j] = iterable[i];
+        i += 1;
+    }
+
+    _ = allocat.shrink(ans, j);
+    ans.len = j;
+
+    return Iterator(rtype).init(allocat, ans);
+}
+
+test "Dropwhile" {
+    var A = [_]u8{1, 2, 3, 5, 'a', 1, 'b', 2, 'c', 11, 'd', 'e', 1, 3, 4};
+    var ans = [_]u8{'a', 1, 'b', 2, 'c', 11, 'd', 'e', 1, 3, 4};
+
+    var res = dropwhile(tallocator, isLessThan10, &A);
+    defer res.deinit();
+
+    printTest(u8, &res, &ans);
     warn("\r\n", .{});
 }
