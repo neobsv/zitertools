@@ -22,15 +22,6 @@ fn mul8(a: u8, b: u8) u8 {
     return a * b; 
 }
 
-test "Reduce" {
-    var A = [_]u8{1, 2, 4};
-    assertEqual(reduce(add8, &A, 0), 7);
-    assertEqual(reduce(mul8, &A, 0), 0);
-    assertEqual(reduce(mul8, &A, 1), 8);
-    warn("\r\n", .{});
-}
-
-
 pub fn Iterator(comptime T: type) type {
     return struct {
         allocator: *std.mem.Allocator,
@@ -52,8 +43,8 @@ pub fn Iterator(comptime T: type) type {
             return null;
         }
 
-        pub fn init(alloc: *std.mem.Allocator, iter: []T) Self {
-            var temp: []T = alloc.dupe(T, iter) catch unreachable;
+        pub fn init(alloc: *std.mem.Allocator, iter: []const T) Self {
+            const temp: []T = alloc.dupe(T, iter) catch unreachable;
             return Self{
                 .allocator = alloc,
                 .items = temp,
@@ -76,35 +67,6 @@ fn printTest(comptime T: type, iter: *Iterator(T), ans: []T) void{
     }
 }
 
-test "Iterator" {
-
-    var A: []u8 = tallocator.alloc(u8, 10) catch unreachable;
-    defer tallocator.destroy(A.ptr);
-
-    var i: u8 = 0;
-    while ( i < 10 ) : ( i += 1 ) {
-        A[i] = i;
-    } 
-    var iter = Iterator(u8).init(tallocator, A);
-    defer iter.deinit();
-
-    printTest(u8, &iter, A);
-
-    var B = std.ArrayList(u8).init(tallocator);
-    defer B.deinit();
-
-    i =  0;
-    while ( i < 10 ) : ( i += 1 ) {
-        _ = try B.append(i*2);
-    } 
-    var iter2 = Iterator(u8).init(tallocator, B.items);
-    defer iter2.deinit();
-
-    printTest(u8, &iter2, B.items);
-    warn("\r\n", .{});
-
-}
-
 pub fn map(
     allocat: *std.mem.Allocator,
     comptime func: anytype, 
@@ -123,17 +85,6 @@ pub fn map(
 
 fn addOne(a: u8) u8 {
     return a + @intCast(u8, 1);
-}
-
-test "Map" {
-    var A = [_]u8{'a', 'b', 'c'};
-    var ans = [_]u8{'b', 'c', 'd'};
-
-    var res = map(tallocator, addOne, &A);
-    defer res.deinit();
-
-    printTest(u8, &res, &ans);
-    warn("\r\n", .{});
 }
 
 pub fn filter(
@@ -166,17 +117,6 @@ fn isLessThan10(a: u8) bool {
     return false;
 }
 
-test "Filter" {
-    var A = [_]u8{1, 'a', 2, 'b', 3, 'c', 'd', 'e'};
-    var ans = [_]u8{1, 2, 3};
-
-    var res = filter(tallocator, isLessThan10, &A);
-    defer res.deinit();
-
-    printTest(u8, &res, &ans);
-    warn("\r\n", .{});
-}
-
 pub fn accumulate(
     allocat: *std.mem.Allocator,
     comptime func: anytype, 
@@ -205,27 +145,6 @@ fn mul(a:u32, b:u32) u32 {
     return a * b;
 }
 
-test "Accumulate" {
-    var A = [_]u32{1, 2, 4};
-    var ans1 = [_]u32{1, 3, 7};
-    var ans2 = [_]u32{0, 0, 0};
-    var ans3 = [_]u32{1, 2, 8};
-
-    var res = accumulate(tallocator, add, &A, 0);
-    defer res.deinit();
-
-    var res2 = accumulate(tallocator, mul, &A, 0);
-    defer res2.deinit();
-
-    var res3 = accumulate(tallocator, mul, &A, 1);
-    defer res3.deinit();
-
-    printTest(u32, &res, &ans1);
-    printTest(u32, &res2, &ans2);
-    printTest(u32, &res3, &ans3);
-    warn("\r\n", .{});
-}
-
 pub fn chain(
     allocat: *std.mem.Allocator,
     comptime func: anytype,
@@ -249,21 +168,6 @@ pub fn chain(
 
 fn addOne8(a: i32) i32 {
     return a+1;
-}
-
-test "Chain" {
-    var A = &[_][]const i32{ 
-        &[_]i32{1, 2}, 
-        &[_]i32{3, 4}
-    };
-
-    var ans = [_]i32{2,3,4,5};
-    var res = chain(tallocator, addOne8, A);
-    defer res.deinit();
-
-    printTest(i32, &res, &ans);
-
-    warn("\r\n", .{});
 }
 
 pub fn min(
@@ -291,15 +195,6 @@ fn compareFnMin(a: i32, b: i32) bool {
     return false;
 }
 
-test "Min" {
-    var A = &[_][]const i32{ 
-        &[_]i32{1, 2}, 
-        &[_]i32{3, 4}
-    };
-    assertEqual(min(tallocator, compareFnMin, A), 1);
-    warn("\r\n", .{});
-}
-
 pub fn max(
     allocat: *std.mem.Allocator,
     comptime func: anytype,
@@ -313,15 +208,6 @@ fn compareFnMax(a: i32, b: i32) bool {
         return true;
     }
     return false;
-}
-
-test "Max" {
-    var A = &[_][]const i32{ 
-        &[_]i32{1, 2}, 
-        &[_]i32{3, 4}
-    };
-    assertEqual(max(tallocator, compareFnMax, A), 4);
-    warn("\r\n", .{});
 }
 
 pub fn filterfalse(
@@ -345,17 +231,6 @@ pub fn filterfalse(
     ans.len = j;
 
     return Iterator(rtype).init(allocat, ans);
-}
-
-test "FilterFalse" {
-    var A = [_]u8{1, 'a', 2, 'b', 3, 'c', 'd', 'e'};
-    var ans = [_]u8{'a', 'b', 'c', 'd', 'e'};
-
-    var res = filterfalse(tallocator, isLessThan10, &A);
-    defer res.deinit();
-
-    printTest(u8, &res, &ans);
-    warn("\r\n", .{});
 }
 
 pub fn dropwhile(
@@ -383,6 +258,190 @@ pub fn dropwhile(
     return Iterator(rtype).init(allocat, ans);
 }
 
+fn recurranceRelation(allocat: *std.mem.Allocator, N: usize) !usize {
+    var T = std.ArrayList(usize).init(allocat);
+    defer T.deinit();
+    try T.append(1);
+    try T.append(2);
+    try T.append(4);
+    try T.append(12);
+    try T.append(32);
+    try T.append(80);
+    if ( N > 5 ) {
+        var i: usize = 6;
+        while (i < N+1) : ( i += 1 ) {
+            var term: usize = (2 * i * T.items[i-1]) / (i-1);
+            try T.append(term);
+            // warn("\r\n term: {} ", .{term});
+        }
+    }
+    return T.items[N];
+}
+
+pub fn powerset(
+    allocat: *std.mem.Allocator,
+    comptime func: anytype, 
+    iterable: []@typeInfo(@TypeOf(func)).Fn.args[0].arg_type.?
+) !Iterator(@typeInfo(@TypeOf(func)).Fn.args[0].arg_type.?) {
+    // Total number of elements is pow(2, iterable.len)
+    // the total number of elements can be calculated by pow(2, N) * (N*1) + ((N-1)*2) + ... + (2*(N-1)) + (1*N)
+    // this is given by the recurrance relation T(N) = 2*N*T(N-1)//(N-1) => should be the allocated length
+    // a generator needs to be constructed to get the result of the above recurrance relation.
+    var totalLength: usize = @intCast(usize, 1) << @intCast(u6, iterable.len);
+    var allocatLength: usize = recurranceRelation(allocat, iterable.len) catch unreachable;
+    warn("\r\ntotal length: {}", .{totalLength});
+    warn("\r\nallocat length: {}", .{allocatLength});
+    const rtype = @typeInfo(@TypeOf(func)).Fn.args[0].arg_type.?;
+    var ans = std.ArrayList(rtype).init(allocat);
+    defer ans.deinit();
+
+    var index: usize = 0;
+    var i: usize = 0;
+    while( i < totalLength ) : ( i += 1 ) {
+        var j: u6 = 0;
+        while ( j < iterable.len ) : ( j += 1 ) {
+            // Bit shift the index j of the array i bits to the left, and this makes the 
+            // last bit of j become the test bit to see if it contains bit i
+            if ( ( ( i >> j) % 2 ) == 1 ) {
+                try ans.append( func(iterable[j]) );
+                // warn(" {},", .{iterable[j]});
+            }
+        }
+        // warn("\r\n =========== ", .{});
+    }
+
+    return Iterator(rtype).init(allocat, ans.items);
+
+}
+
+fn mulOne32 (a: u32) u32 {
+    return a * 1;
+}
+
+test "Reduce" {
+    var A = [_]u8{1, 2, 4};
+    assertEqual(reduce(add8, &A, 0), 7);
+    assertEqual(reduce(mul8, &A, 0), 0);
+    assertEqual(reduce(mul8, &A, 1), 8);
+    warn("\r\n", .{});
+}
+
+test "Iterator" {
+
+    var A: []u8 = tallocator.alloc(u8, 10) catch unreachable;
+    defer tallocator.destroy(A.ptr);
+
+    var i: u8 = 0;
+    while ( i < 10 ) : ( i += 1 ) {
+        A[i] = i;
+    } 
+    var iter = Iterator(u8).init(tallocator, A);
+    defer iter.deinit();
+
+    printTest(u8, &iter, A);
+
+    var B = std.ArrayList(u8).init(tallocator);
+    defer B.deinit();
+
+    i =  0;
+    while ( i < 10 ) : ( i += 1 ) {
+        _ = try B.append(i*2);
+    } 
+    var iter2 = Iterator(u8).init(tallocator, B.items);
+    defer iter2.deinit();
+
+    printTest(u8, &iter2, B.items);
+    warn("\r\n", .{});
+
+}
+
+test "Map" {
+    var A = [_]u8{'a', 'b', 'c'};
+    var ans = [_]u8{'b', 'c', 'd'};
+
+    var res = map(tallocator, addOne, &A);
+    defer res.deinit();
+
+    printTest(u8, &res, &ans);
+    warn("\r\n", .{});
+}
+
+test "Filter" {
+    var A = [_]u8{1, 'a', 2, 'b', 3, 'c', 'd', 'e'};
+    var ans = [_]u8{1, 2, 3};
+
+    var res = filter(tallocator, isLessThan10, &A);
+    defer res.deinit();
+
+    printTest(u8, &res, &ans);
+    warn("\r\n", .{});
+}
+
+test "Accumulate" {
+    var A = [_]u32{1, 2, 4};
+    var ans1 = [_]u32{1, 3, 7};
+    var ans2 = [_]u32{0, 0, 0};
+    var ans3 = [_]u32{1, 2, 8};
+
+    var res = accumulate(tallocator, add, &A, 0);
+    defer res.deinit();
+
+    var res2 = accumulate(tallocator, mul, &A, 0);
+    defer res2.deinit();
+
+    var res3 = accumulate(tallocator, mul, &A, 1);
+    defer res3.deinit();
+
+    printTest(u32, &res, &ans1);
+    printTest(u32, &res2, &ans2);
+    printTest(u32, &res3, &ans3);
+    warn("\r\n", .{});
+}
+
+test "Chain" {
+    var A = &[_][]const i32{ 
+        &[_]i32{1, 2}, 
+        &[_]i32{3, 4}
+    };
+
+    var ans = [_]i32{2,3,4,5};
+    var res = chain(tallocator, addOne8, A);
+    defer res.deinit();
+
+    printTest(i32, &res, &ans);
+
+    warn("\r\n", .{});
+}
+
+test "Min" {
+    var A = &[_][]const i32{ 
+        &[_]i32{1, 2}, 
+        &[_]i32{3, 4}
+    };
+    assertEqual(min(tallocator, compareFnMin, A), 1);
+    warn("\r\n", .{});
+}
+
+test "Max" {
+    var A = &[_][]const i32{ 
+        &[_]i32{1, 2}, 
+        &[_]i32{3, 4}
+    };
+    assertEqual(max(tallocator, compareFnMax, A), 4);
+    warn("\r\n", .{});
+}
+
+test "FilterFalse" {
+    var A = [_]u8{1, 'a', 2, 'b', 3, 'c', 'd', 'e'};
+    var ans = [_]u8{'a', 'b', 'c', 'd', 'e'};
+
+    var res = filterfalse(tallocator, isLessThan10, &A);
+    defer res.deinit();
+
+    printTest(u8, &res, &ans);
+    warn("\r\n", .{});
+}
+
 test "Dropwhile" {
     var A = [_]u8{1, 2, 3, 5, 'a', 1, 'b', 2, 'c', 11, 'd', 'e', 1, 3, 4};
     var ans = [_]u8{'a', 1, 'b', 2, 'c', 11, 'd', 'e', 1, 3, 4};
@@ -391,5 +450,40 @@ test "Dropwhile" {
     defer res.deinit();
 
     printTest(u8, &res, &ans);
+    warn("\r\n", .{});
+}
+
+test "PowerSet" {
+    var A = [_]u32{1, 2, 3, 4};
+    var ans = [_]u32{1, 2, 1, 2, 3, 1, 3, 2, 3, 1, 2, 3, 4, 1, 4, 2, 4, 1, 2, 4, 3, 4, 1, 3, 4, 2, 3, 4, 1, 2, 3, 4};
+
+    var res = powerset(tallocator, mulOne32, &A) catch unreachable;
+    defer res.deinit();
+
+    warn("\r\n iterlen: {} ", .{res.len});
+    warn("\r\n anslen: {}", .{ans.len});
+
+    printTest(u32, &res, &ans);
+
+    var A1 = [_]u32{1, 2, 3};
+    var ans1 = [_]u32{1, 2, 1, 2, 3, 1, 3, 2, 3, 1, 2, 3};
+
+    var res1 = powerset(tallocator, mulOne32, &A1) catch unreachable;
+    defer res1.deinit();
+
+    warn("\r\n iterlen: {} ", .{res1.len});
+    warn("\r\n anslen: {}", .{ans1.len});
+
+    printTest(u32, &res1, &ans1);
+
+    var A2 = [_]u32{1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11};
+
+    var res2 = powerset(tallocator, mulOne32, &A2) catch unreachable;
+    defer res2.deinit();
+
+    warn("\r\n iterlen: {} ", .{res2.len});
+
+    // printTest(u8, &res2, &ans2);
+
     warn("\r\n", .{});
 }
