@@ -97,7 +97,7 @@ pub fn filter(
     defer allocat.destroy(ans.ptr);
     
     var j: usize = 0;
-    for (iterable) | item, i | {
+    for (iterable) | item | {
         if (func(item) == true) {
             ans[j] = item;
             j += 1;
@@ -283,10 +283,11 @@ pub fn powerset(
     comptime func: anytype, 
     iterable: []@typeInfo(@TypeOf(func)).Fn.args[0].arg_type.?
 ) !Iterator(@typeInfo(@TypeOf(func)).Fn.args[0].arg_type.?) {
-    // Total number of elements is pow(2, iterable.len)
+    // Total number of sets is pow(2, iterable.len)
     // the total number of elements can be calculated by (N*1) + ((N-1)*2) + ((N-2)*3) ... + (2*(N-1)) + (1*N)
     // this is given by the recurrance relation T(N) = 2*N*T(N-1)//(N-1) => should be the allocated length
     // a func needs to be constructed to get the result of the above recurrance relation.
+    // Source: the recurrance relation is mine, and the powerset algorithm is from MITx: 6.00.2x
     var totalLength: usize =  @intCast(usize, 1) << @truncate(std.math.Log2Int(usize), iterable.len);
     var allocatLength: usize = recurranceRelation(allocat, iterable.len) catch unreachable;
     // warn("\r\ntotal length: {}", .{totalLength});
@@ -318,6 +319,13 @@ pub fn powerset(
 fn mulOne32 (a: u32) u32 {
     return a * 1;
 }
+
+pub fn permutations() void {}
+
+pub fn combinations() void {}
+
+pub fn compress() void {}
+
 
 test "Reduce" {
     var A = [_]u8{1, 2, 4};
