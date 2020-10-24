@@ -370,8 +370,8 @@ pub fn permutation(
         var i: usize = N - 1;
         var j: usize = N;
 
-        while ( i > 0 and iter[i] > iter[i+1] ) : ( i -= 1 ) {}
-        while ( j > 0 and iter[j] < iter[i] ) : ( j -= 1 ) {}
+        while ( iter[i] > iter[i+1] ) : ( i -= 1 ) {}
+        while ( iter[j] < iter[i] ) : ( j -= 1 ) {}
 
         mem.swap(T, &iter[i], &iter[j]);
 
