@@ -27,5 +27,7 @@ Suggestions and contributions are welcome.
 
 ## Filterfalse
 
+## PowerSet
+
 
 Note: The library does not support generators yet

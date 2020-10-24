@@ -284,16 +284,16 @@ pub fn powerset(
     iterable: []@typeInfo(@TypeOf(func)).Fn.args[0].arg_type.?
 ) !Iterator(@typeInfo(@TypeOf(func)).Fn.args[0].arg_type.?) {
     // Total number of elements is pow(2, iterable.len)
-    // the total number of elements can be calculated by pow(2, N) * (N*1) + ((N-1)*2) + ... + (2*(N-1)) + (1*N)
+    // the total number of elements can be calculated by (N*1) + ((N-1)*2) + ((N-2)*3) ... + (2*(N-1)) + (1*N)
     // this is given by the recurrance relation T(N) = 2*N*T(N-1)//(N-1) => should be the allocated length
-    // a generator needs to be constructed to get the result of the above recurrance relation.
-    var totalLength: usize = @intCast(usize, 1) << @intCast(u6, iterable.len);
+    // a func needs to be constructed to get the result of the above recurrance relation.
+    var totalLength: usize =  @intCast(usize, 1) << @truncate(std.math.Log2Int(usize), iterable.len);
     var allocatLength: usize = recurranceRelation(allocat, iterable.len) catch unreachable;
-    warn("\r\ntotal length: {}", .{totalLength});
-    warn("\r\nallocat length: {}", .{allocatLength});
+    // warn("\r\ntotal length: {}", .{totalLength});
+    // warn("\r\nallocat length: {}", .{allocatLength});
     const rtype = @typeInfo(@TypeOf(func)).Fn.args[0].arg_type.?;
-    var ans = std.ArrayList(rtype).init(allocat);
-    defer ans.deinit();
+    var ans: []rtype  = allocat.alloc(rtype, allocatLength) catch unreachable;
+    defer allocat.free(ans);
 
     var index: usize = 0;
     var i: usize = 0;
@@ -303,14 +303,15 @@ pub fn powerset(
             // Bit shift the index j of the array i bits to the left, and this makes the 
             // last bit of j become the test bit to see if it contains bit i
             if ( ( ( i >> j) % 2 ) == 1 ) {
-                try ans.append( func(iterable[j]) );
+                ans[index] = func(iterable[j]);
+                index += 1;
                 // warn(" {},", .{iterable[j]});
             }
         }
         // warn("\r\n =========== ", .{});
     }
 
-    return Iterator(rtype).init(allocat, ans.items);
+    return Iterator(rtype).init(allocat, ans);
 
 }
 
@@ -460,8 +461,8 @@ test "PowerSet" {
     var res = powerset(tallocator, mulOne32, &A) catch unreachable;
     defer res.deinit();
 
-    warn("\r\n iterlen: {} ", .{res.len});
-    warn("\r\n anslen: {}", .{ans.len});
+    // warn("\r\n iterlen: {} ", .{res.len});
+    // warn("\r\n anslen: {}", .{ans.len});
 
     printTest(u32, &res, &ans);
 
@@ -471,19 +472,20 @@ test "PowerSet" {
     var res1 = powerset(tallocator, mulOne32, &A1) catch unreachable;
     defer res1.deinit();
 
-    warn("\r\n iterlen: {} ", .{res1.len});
-    warn("\r\n anslen: {}", .{ans1.len});
+    // warn("\r\n iterlen: {} ", .{res1.len});
+    // warn("\r\n anslen: {}", .{ans1.len});
 
     printTest(u32, &res1, &ans1);
 
-    var A2 = [_]u32{1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11};
+    var A2 = [_]u32{1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15};
 
     var res2 = powerset(tallocator, mulOne32, &A2) catch unreachable;
     defer res2.deinit();
 
-    warn("\r\n iterlen: {} ", .{res2.len});
+    // warn("\r\n iterlen: {} ", .{res2.len});
 
-    // printTest(u8, &res2, &ans2);
+    const allocLength: usize = recurranceRelation(tallocator, A2.len) catch unreachable;
+    assertEqual(res2.len, allocLength);
 
     warn("\r\n", .{});
 }
