@@ -259,23 +259,25 @@ pub fn dropwhile(
 }
 
 fn recurranceRelation(allocat: *std.mem.Allocator, N: usize) !usize {
-    var T = std.ArrayList(usize).init(allocat);
-    defer T.deinit();
-    try T.append(1);
-    try T.append(2);
-    try T.append(4);
-    try T.append(12);
-    try T.append(32);
-    try T.append(80);
+    switch (N) {
+        0 => { return 1;  },
+        1 => { return 2;  },
+        2 => { return 4;  },
+        3 => { return 12; },
+        4 => { return 32; },
+        5 => { return 80; }, 
+        else => {}
+    }
+    var T: usize = 80;
     if ( N > 5 ) {
         var i: usize = 6;
         while (i < N+1) : ( i += 1 ) {
-            var term: usize = (2 * i * T.items[i-1]) / (i-1);
-            try T.append(term);
+            var term: usize = (2 * i * T) / (i-1);
+            T = term;
             // warn("\r\n term: {} ", .{term});
         }
     }
-    return T.items[N];
+    return T;
 }
 
 pub fn powerset(
@@ -320,7 +322,23 @@ fn mulOne32 (a: u32) u32 {
     return a * 1;
 }
 
-pub fn permutations() void {}
+fn fact(N: i64) i64 {
+    var T = std.ArrayList(i64).init(allocat);
+    defer T.deinit();
+    try T.append(1);
+    try T.append(1);
+
+
+}
+
+pub fn permutations(
+    allocat: *std.mem.Allocator,
+    comptime func: anytype, 
+    iterable: []@typeInfo(@TypeOf(func)).Fn.args[0].arg_type.?
+) !Iterator(@typeInfo(@TypeOf(func)).Fn.args[0].arg_type.?) {
+
+
+}
 
 pub fn combinations() void {}
 

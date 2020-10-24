@@ -50,4 +50,4 @@ Note: The library does not support generators yet
 
 ### MITx: 6.00.2x
 
-### Heap, Permutations by interchanges, Computer Journal, 1963
+### Sedgewick R, Permutation Generation Methods, Princeton University
