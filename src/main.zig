@@ -1,4 +1,5 @@
 const std = @import("std");
+const mem = std.mem;
 const tallocator = std.testing.allocator;
 const warn = std.debug.warn;
 const assertEqual = std.testing.expectEqual;
@@ -322,25 +323,79 @@ fn mulOne32 (a: u32) u32 {
     return a * 1;
 }
 
-fn fact(N: i64) i64 {
-    var T = std.ArrayList(i64).init(allocat);
-    defer T.deinit();
-    try T.append(1);
-    try T.append(1);
+fn fact(N: u128) u128 {
+    switch (N) {
+        0 => { return 1; },
+        1 => { return 1; },
+        else => {}
+    }
 
+    var T: u128 = 1;
+    var i: u128 = 2;
 
+    while( i < N+1 ) : ( i += 1 ) {
+        T = T * i;
+    }
+    return T;
 }
 
-pub fn permutations(
+pub fn permutation(
+    comptime T: type, 
     allocat: *std.mem.Allocator,
-    comptime func: anytype, 
-    iterable: []@typeInfo(@TypeOf(func)).Fn.args[0].arg_type.?
-) !Iterator(@typeInfo(@TypeOf(func)).Fn.args[0].arg_type.?) {
+    iter: []T
+) !Iterator(T) {
+    // There are N! possible permutations of a set of cardinality N
+    // The number of elements of N! such sets is N! * N => should be allocated for the result
+    var N: usize =  iter.len - 1;
+    var allocatLength: usize = @intCast(usize, fact(N+1) * (N+1));
+    // warn("\r\ntotal length: {}", .{N+1});
+    // warn("\r\nallocat length: {}", .{allocatLength});
+    var ans: []T  = allocat.alloc(T, allocatLength) catch unreachable;
+    defer allocat.free(ans);
 
+    var index: usize = 0;
+    //warn("\r\n", .{});
+    for (iter) | item | {
+        //warn("{}, ", .{item});
+        ans[index] = item;
+        index += 1;
+    }
+    //warn("\r\n", .{});
+    
+    var c: u128 = 0;
+    var numSets: u128 = fact(N+1)-1;
+    // warn("\r\n num sets: {}", .{numSets});
+
+    while ( c < numSets ) : ( c += 1 ) {
+        var i: usize = N - 1;
+        var j: usize = N;
+
+        while ( i > 0 and iter[i] > iter[i+1] ) : ( i -= 1 ) {}
+        while ( j > 0 and iter[j] < iter[i] ) : ( j -= 1 ) {}
+
+        mem.swap(T, &iter[i], &iter[j]);
+
+        i += 1;
+        j = N;
+
+        while ( i < j ) : ({ i += 1; j -= 1; }) {
+            mem.swap(T, &iter[i], &iter[j]);
+        }
+
+        // warn("\r\n", .{});
+        for (iter) | item | {
+            // warn("{}, ", .{item});
+            ans[index] = item;
+            index += 1;
+        }
+        // warn("\r\n", .{});
+    }
+
+    return Iterator(T).init(allocat, ans);
 
 }
 
-pub fn combinations() void {}
+pub fn combination() void {}
 
 pub fn compress() void {}
 
@@ -514,4 +569,34 @@ test "PowerSet" {
     assertEqual(res2.len, allocLength);
 
     warn("\r\n", .{});
+}
+
+test "Permutation" {
+    var ans: u128 = fact(3);
+    assertEqual(ans, 6);
+    
+
+    var A = [_]u32{1, 2, 3};
+    var ans1 = [_]u32{1, 2, 3, 1, 3, 2, 2, 1, 3, 2, 3, 1, 3, 1, 2, 3, 2, 1};
+
+    var res = permutation(u32, tallocator, &A) catch unreachable;
+    defer res.deinit();
+
+    printTest(u32, &res, &ans1);
+
+    var A2 = [_]u32{1, 2, 3, 4, 5, 6, 7, 8, 9, 10};
+    var res1 = permutation(u32, tallocator, &A2) catch unreachable;
+    defer res1.deinit();
+
+    //printTest(u32, &res, &ans1);
+
+    warn("\r\n", .{});
+}
+
+pub fn main() !void {
+    var A2 = [_]u32{1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15};
+    var res1 = permutation(u32, tallocator, &A2) catch unreachable;
+    defer res1.deinit();
+    //warn("\r\n", .{});
+    return;
 }
