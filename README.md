@@ -37,6 +37,10 @@ Suggestions and contributions are welcome.
 
 ### Permutations
 
+#### Lexicographically ordered
+
+#### Efficient: Heap's method
+
 ### Combinations
 
 

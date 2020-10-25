@@ -339,7 +339,7 @@ fn fact(N: u128) u128 {
     return T;
 }
 
-pub fn permutation(
+pub fn permutation_lex(
     comptime T: type, 
     allocat: *std.mem.Allocator,
     iter: []T
@@ -389,6 +389,66 @@ pub fn permutation(
             index += 1;
         }
         // warn("\r\n", .{});
+    }
+
+    return Iterator(T).init(allocat, ans);
+
+}
+
+pub fn permutation(
+    comptime T: type, 
+    allocat: *std.mem.Allocator,
+    iter: []T
+) !Iterator(T) {
+    // There are N! possible permutations of a set of cardinality N
+    // The number of elements of N! such sets is N! * N => should be allocated for the result
+    var N: usize =  iter.len - 1;
+    var allocatLength: usize = @intCast(usize, fact(N+1) * (N+1));
+    // warn("\r\ntotal length: {}", .{N+1});
+    // warn("\r\nallocat length: {}", .{allocatLength});
+    var ans: []T  = allocat.alloc(T, allocatLength) catch unreachable;
+    defer allocat.free(ans);
+
+    var c: []usize = allocat.alloc(usize, N+1) catch unreachable;
+    defer allocat.free(c);
+
+    var i: usize = 0;
+    var index: usize = 0;
+    // warn("\r\n", .{});
+    for (iter) | item, x | {
+        // warn("{}, ", .{item});
+        c[x] = 0;
+        ans[index] = item;
+        index += 1;
+    }
+    // warn("\r\n", .{});
+    
+
+    while ( i < N+1 ) {
+
+        if (c[i] < i) {
+            if ( (i%2) == 0 ) {
+                mem.swap(T, &iter[0], &iter[i]);
+            } else {
+                mem.swap(T, &iter[c[i]], &iter[i]);
+            }
+
+            // warn("\r\n", .{});
+            for (iter) | item | {
+                // warn("{}, ", .{item});
+                ans[index] = item;
+                index += 1;
+            }
+            // warn("\r\n", .{});
+
+            c[i] += 1;
+            i = 0;
+
+        } else {
+            c[i] = 0;
+            i += 1;
+        }
+
     }
 
     return Iterator(T).init(allocat, ans);
@@ -579,7 +639,7 @@ test "Permutation" {
     var A = [_]u32{1, 2, 3};
     var ans1 = [_]u32{1, 2, 3, 1, 3, 2, 2, 1, 3, 2, 3, 1, 3, 1, 2, 3, 2, 1};
 
-    var res = permutation(u32, tallocator, &A) catch unreachable;
+    var res = permutation_lex(u32, tallocator, &A) catch unreachable;
     defer res.deinit();
 
     printTest(u32, &res, &ans1);
