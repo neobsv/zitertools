@@ -248,9 +248,8 @@ pub fn dropwhile(
     while ( func(iterable[i]) == true ) : ( i += 1 ) {}
 
     var j: usize = 0;
-    while ( i < totalLength ) : ( j += 1 ) {
+    while ( i < totalLength ) : ({ j += 1; i += 1; }) {
         ans[j] = iterable[i];
-        i += 1;
     }
 
     _ = allocat.shrink(ans, j);
@@ -340,76 +339,78 @@ fn fact(N: u128) u128 {
 }
 
 pub fn permutation_lex(
-    comptime T: type, 
     allocat: *std.mem.Allocator,
-    iter: []T
-) !Iterator(T) {
+    comptime func: anytype, 
+    iter: []@typeInfo(@TypeOf(func)).Fn.args[0].arg_type.?
+) !Iterator(@typeInfo(@TypeOf(func)).Fn.args[0].arg_type.?) {
     // There are N! possible permutations of a set of cardinality N
     // The number of elements of N! such sets is N! * N => should be allocated for the result
-    var N: usize =  iter.len - 1;
-    var allocatLength: usize = @intCast(usize, fact(N+1) * (N+1));
-    // warn("\r\ntotal length: {}", .{N+1});
+    var N: usize =  iter.len;
+    var allocatLength: usize = @intCast(usize, fact(N) * N);
+    // warn("\r\ntotal length: {}", .{N});
     // warn("\r\nallocat length: {}", .{allocatLength});
-    var ans: []T  = allocat.alloc(T, allocatLength) catch unreachable;
+    const rtype = @typeInfo(@TypeOf(func)).Fn.args[0].arg_type.?;
+    var ans: []rtype  = allocat.alloc(rtype, allocatLength) catch unreachable;
     defer allocat.free(ans);
 
     var index: usize = 0;
     //warn("\r\n", .{});
     for (iter) | item | {
         //warn("{}, ", .{item});
-        ans[index] = item;
+        ans[index] = func(item);
         index += 1;
     }
     //warn("\r\n", .{});
     
     var c: u128 = 0;
-    var numSets: u128 = fact(N+1)-1;
+    var numSets: u128 = fact(N) - 1;
     // warn("\r\n num sets: {}", .{numSets});
 
     while ( c < numSets ) : ( c += 1 ) {
-        var i: usize = N - 1;
-        var j: usize = N;
+        var i: usize = N - 2;
+        var j: usize = N - 1;
 
         while ( iter[i] > iter[i+1] ) : ( i -= 1 ) {}
         while ( iter[j] < iter[i] ) : ( j -= 1 ) {}
 
-        mem.swap(T, &iter[i], &iter[j]);
+        mem.swap(rtype, &iter[i], &iter[j]);
 
         i += 1;
-        j = N;
+        j = N - 1;
 
         while ( i < j ) : ({ i += 1; j -= 1; }) {
-            mem.swap(T, &iter[i], &iter[j]);
+            mem.swap(rtype, &iter[i], &iter[j]);
         }
 
         // warn("\r\n", .{});
         for (iter) | item | {
             // warn("{}, ", .{item});
-            ans[index] = item;
+            ans[index] = func(item);
             index += 1;
         }
         // warn("\r\n", .{});
     }
 
-    return Iterator(T).init(allocat, ans);
+    return Iterator(rtype).init(allocat, ans);
 
 }
 
 pub fn permutation(
-    comptime T: type, 
     allocat: *std.mem.Allocator,
-    iter: []T
-) !Iterator(T) {
+    comptime func: anytype, 
+    iter: []@typeInfo(@TypeOf(func)).Fn.args[0].arg_type.?
+) !Iterator(@typeInfo(@TypeOf(func)).Fn.args[0].arg_type.?) {
     // There are N! possible permutations of a set of cardinality N
     // The number of elements of N! such sets is N! * N => should be allocated for the result
-    var N: usize =  iter.len - 1;
-    var allocatLength: usize = @intCast(usize, fact(N+1) * (N+1));
+    var N: usize =  iter.len;
+    var allocatLength: usize = @intCast(usize, fact(N) * N);
     // warn("\r\ntotal length: {}", .{N+1});
     // warn("\r\nallocat length: {}", .{allocatLength});
-    var ans: []T  = allocat.alloc(T, allocatLength) catch unreachable;
+    const rtype = @typeInfo(@TypeOf(func)).Fn.args[0].arg_type.?;
+    var ans: []rtype  = allocat.alloc(rtype, allocatLength) catch unreachable;
     defer allocat.free(ans);
 
-    var c: []usize = allocat.alloc(usize, N+1) catch unreachable;
+    var c: []usize = allocat.alloc(usize, N) catch unreachable;
     defer allocat.free(c);
 
     var i: usize = 0;
@@ -418,25 +419,25 @@ pub fn permutation(
     for (iter) | item, x | {
         // warn("{}, ", .{item});
         c[x] = 0;
-        ans[index] = item;
+        ans[index] = func(item);
         index += 1;
     }
     // warn("\r\n", .{});
     
 
-    while ( i < N+1 ) {
+    while ( i < N ) {
 
         if (c[i] < i) {
             if ( (i%2) == 0 ) {
-                mem.swap(T, &iter[0], &iter[i]);
+                mem.swap(rtype, &iter[0], &iter[i]);
             } else {
-                mem.swap(T, &iter[c[i]], &iter[i]);
+                mem.swap(rtype, &iter[c[i]], &iter[i]);
             }
 
             // warn("\r\n", .{});
             for (iter) | item | {
                 // warn("{}, ", .{item});
-                ans[index] = item;
+                ans[index] = func(item);
                 index += 1;
             }
             // warn("\r\n", .{});
@@ -451,11 +452,72 @@ pub fn permutation(
 
     }
 
-    return Iterator(T).init(allocat, ans);
+    return Iterator(rtype).init(allocat, ans);
 
 }
 
-pub fn combination() void {}
+fn mulOne1 (a: u1) u1 {
+    return a * 1;
+}
+
+pub fn combination(
+    allocat: *std.mem.Allocator,
+    comptime func: anytype, 
+    iter: []@typeInfo(@TypeOf(func)).Fn.args[0].arg_type.?,
+    choose: usize
+) !Iterator(@typeInfo(@TypeOf(func)).Fn.args[0].arg_type.?) {
+    // Did not find a good answer to this problem.
+    // Will be using permutation for this, and making a bit array of size iter.len (n)
+    // Out of this we can set k bits to simulate n choose k, and generate all permutations
+    // of the same to get the k-combination set of the iterable.
+
+    var N: usize =  iter.len;
+    var k: usize = choose;
+    var allocatLength: usize = @intCast(usize, fact(N));
+    // warn("\ntotal length: {}", .{N});
+    // warn("\nallocat length: {}\n", .{allocatLength});
+    const rtype = @typeInfo(@TypeOf(func)).Fn.args[0].arg_type.?;
+    var ans: []rtype  = allocat.alloc(rtype, allocatLength) catch unreachable;
+    defer allocat.free(ans);
+
+    var c: []u1 = allocat.alloc(u1, N) catch unreachable;
+    defer allocat.free(c);
+
+    var i: usize = 0;
+    while ( i < N ) : ( i += 1 ) {
+        if ( i < k ) {
+            c[i] = 1;
+        } else {
+            c[i] = 0;
+        }
+    }
+
+    // i = 0;
+    // while( i < N ) : ( i += 1 ) {
+    //     warn("combo init: {} \n", .{c[i]});
+    // }
+
+    // Taking a bit array of n and choosing k bits, and getting all permutations
+    // of such a configuration. We will use this to generate the k-combination set of iter.
+    var res = permutation(allocat, mulOne1, c) catch unreachable;
+    defer res.deinit();
+
+    i = 0;
+    var index: usize = 0;
+    while ( i < N ) : ( i += 1 ) {
+        //warn("combo index array: {} \n", .{res.items[i]});
+        var j: usize = 0;
+        while ( j < N ) : ( j += 1 ) {
+            if ( res.items[i] == 1 ) {
+                ans[index] = func(iter[j]);
+                index += 1;
+            }
+        }
+    }
+
+    return Iterator(rtype).init(allocat, ans);
+
+}
 
 pub fn compress() void {}
 
@@ -638,13 +700,13 @@ test "Permutation" {
     var A = [_]u32{1, 2, 3};
     var ans1 = [_]u32{1, 2, 3, 1, 3, 2, 2, 1, 3, 2, 3, 1, 3, 1, 2, 3, 2, 1};
 
-    var res = permutation_lex(u32, tallocator, &A) catch unreachable;
+    var res = permutation_lex(tallocator, mulOne32, &A) catch unreachable;
     defer res.deinit();
 
     printTest(u32, &res, &ans1);
 
     var A2 = [_]u32{1, 2, 3, 4, 5, 6, 7, 8, 9, 10};
-    var res1 = permutation(u32, tallocator, &A2) catch unreachable;
+    var res1 = permutation(tallocator, mulOne32, &A2) catch unreachable;
     defer res1.deinit();
 
     //printTest(u32, &res, &ans1);
@@ -652,9 +714,23 @@ test "Permutation" {
     warn("\r\n", .{});
 }
 
+test "Combination" {
+    var ans: u128 = fact(3);
+    assertEqual(ans, 6);
+    
+    var A = [_]u32{1, 2, 3};
+    var ans1 = [_]u32{1, 2, 3, 1, 2, 3};
+
+    var res = combination(tallocator, mulOne32, &A, 2) catch unreachable;
+    defer res.deinit();
+
+    printTest(u32, &res, &ans1);
+    warn("\r\n", .{});
+}
+
 pub fn main() !void {
-    var A2 = [_]u32{1, 2, 3, 4, 5, 6, 7, 8, 9, 10};
-    var res1 = permutation(u32, tallocator, &A2) catch unreachable;
+    var A2 = [_]u32{1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15};
+    var res1 = permutation(tallocator, mulOne32, &A2) catch unreachable;
     defer res1.deinit();
     warn("\r\n", .{});
     return;
