@@ -62,7 +62,8 @@ pub fn Iterator(comptime T: type) type {
 fn printTest(comptime T: type, iter: *Iterator(T), ans: []T) void{
     var i: usize = 0;
     while (iter.next()) | item | {
-        // warn("\r\n ans: {} item: {} ", .{ans[i], item.*});
+        //warn("\r\n ans: {} item: {} ", .{ans[i], item.*});
+        //warn("{} \n", .{item.*});
         assertEqual(ans[i], item.*);
         i += 1;
     }
@@ -471,9 +472,18 @@ pub fn combination(
     // Out of this we can set k bits to simulate n choose k, and generate all permutations
     // of the same to get the k-combination set of the iterable.
 
+    // There will be nCk sets of k elements each, so the total memory that needs to be allocated
+    // is nCk * k for all the elements. allocatLength = ( fact(N) / (fact(k) * fact(N-k)) ) * k
+
+    // However, this is only possible if we can easily de-duplicate the permutation output, 
+    // which needs a good set implementation from the language. Till then I will be making a 
+    // combination function with duplicates.
+    // till then i'll be using allocatLength = fact(N) * k and allowing duplicate sets to be returned
+    // from the permutation function.
+
     var N: usize =  iter.len;
     var k: usize = choose;
-    var allocatLength: usize = @intCast(usize, fact(N));
+    var allocatLength: usize = @intCast(usize, fact(N) * k);
     // warn("\ntotal length: {}", .{N});
     // warn("\nallocat length: {}\n", .{allocatLength});
     const rtype = @typeInfo(@TypeOf(func)).Fn.args[0].arg_type.?;
@@ -502,17 +512,30 @@ pub fn combination(
     var res = permutation(allocat, mulOne1, c) catch unreachable;
     defer res.deinit();
 
-    i = 0;
+    // var bufset = std.BufSet.init(allocat);
+    // defer bufset.deinit();
+
+    // var buf = "";
+
+    // while ( res.next() ) | item | {
+    //     if ( (N % 4) == 0 ) {
+    //         buf = "";
+    //     }
+    //     buf += ( 0x00 | item.*);
+    //     try bufset.put( buf );
+    //     warn("combo: {}\n", .{ (0x00 | item.*) });
+    // }
+
+    // warn("combo len % 4: {}", .{res.len});
+
     var index: usize = 0;
-    while ( i < N ) : ( i += 1 ) {
-        //warn("combo index array: {} \n", .{res.items[i]});
-        var j: usize = 0;
-        while ( j < N ) : ( j += 1 ) {
-            if ( res.items[i] == 1 ) {
-                ans[index] = func(iter[j]);
-                index += 1;
-            }
+    i = 0;
+    while ( res.next() ) | item | {
+        if ( (0x00 | item.*) == 1 ) {
+            ans[index] = func(iter[(i%N)]);
+            index += 1;
         }
+        i += 1;
     }
 
     return Iterator(rtype).init(allocat, ans);
@@ -718,8 +741,10 @@ test "Combination" {
     var ans: u128 = fact(3);
     assertEqual(ans, 6);
     
-    var A = [_]u32{1, 2, 3};
-    var ans1 = [_]u32{1, 2, 3, 1, 2, 3};
+    var A = [_]u32{1, 2, 3, 4};
+    // consider elements of ans in pairs, and duplicates are present which need to be removed.
+    // De-duplication is possible only when a proper hash set implementation has been done in the std lib.
+    var ans1 = [_]u32{1, 2, 1, 2, 2, 3, 1, 3, 1, 3, 2, 3, 2, 3, 1, 3, 1, 3, 2, 3, 1, 2, 1, 2, 1, 4, 2, 4, 2, 4, 1, 4, 3, 4, 3, 4, 3, 4, 3, 4, 1, 4, 2, 4, 2, 4, 1, 4};
 
     var res = combination(tallocator, mulOne32, &A, 2) catch unreachable;
     defer res.deinit();
