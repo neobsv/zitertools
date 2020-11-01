@@ -31,6 +31,8 @@ Suggestions and contributions are welcome.
 
 ### Compress
 
+### Takewhile
+
 ## Combinatoric Iterators
 
 ### Powerset
@@ -42,6 +44,12 @@ Suggestions and contributions are welcome.
 #### Efficient: Heap's method
 
 ### Combinations
+
+#### Generate from powerset => too slow
+
+#### Generate from permutations
+
+#### Twiddle
 
 
 Note: The library does not support generators yet

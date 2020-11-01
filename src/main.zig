@@ -259,6 +259,27 @@ pub fn dropwhile(
     return Iterator(rtype).init(allocat, ans);
 }
 
+pub fn takewhile(
+    allocat: *std.mem.Allocator,
+    comptime func: anytype, 
+    iterable: []@typeInfo(@TypeOf(func)).Fn.args[0].arg_type.?
+) Iterator(@typeInfo(@TypeOf(func)).Fn.args[0].arg_type.?) {
+    var totalLength: usize = iterable.len;
+    const rtype = @typeInfo(@TypeOf(func)).Fn.args[0].arg_type.?;
+    var ans: []rtype  = allocat.alloc(rtype, totalLength) catch unreachable;
+    defer allocat.destroy(ans.ptr);
+
+    var i: usize = 0;
+    while ( func(iterable[i]) == true ) : ( i += 1 ) {
+        ans[i] = iterable[i];
+    }
+
+    _ = allocat.shrink(ans, i);
+    ans.len = i;
+
+    return Iterator(rtype).init(allocat, ans);
+}
+
 fn recurranceRelation(N: usize) !usize {
     switch (N) {
         0 => { return 1;  },
@@ -339,14 +360,14 @@ fn fact(N: u128) u128 {
     return T;
 }
 
-pub fn permutation_lex(
+pub fn permutations_lex(
     allocat: *std.mem.Allocator,
     comptime func: anytype, 
-    iter: []@typeInfo(@TypeOf(func)).Fn.args[0].arg_type.?
+    iterable: []@typeInfo(@TypeOf(func)).Fn.args[0].arg_type.?
 ) !Iterator(@typeInfo(@TypeOf(func)).Fn.args[0].arg_type.?) {
     // There are N! possible permutations of a set of cardinality N
     // The number of elements of N! such sets is N! * N => should be allocated for the result
-    var N: usize =  iter.len;
+    var N: usize =  iterable.len;
     var allocatLength: usize = @intCast(usize, fact(N) * N);
     // warn("\r\ntotal length: {}", .{N});
     // warn("\r\nallocat length: {}", .{allocatLength});
@@ -356,7 +377,7 @@ pub fn permutation_lex(
 
     var index: usize = 0;
     //warn("\r\n", .{});
-    for (iter) | item | {
+    for (iterable) | item | {
         //warn("{}, ", .{item});
         ans[index] = func(item);
         index += 1;
@@ -371,20 +392,20 @@ pub fn permutation_lex(
         var i: usize = N - 2;
         var j: usize = N - 1;
 
-        while ( iter[i] > iter[i+1] ) : ( i -= 1 ) {}
-        while ( iter[j] < iter[i] ) : ( j -= 1 ) {}
+        while ( iterable[i] > iterable[i+1] ) : ( i -= 1 ) {}
+        while ( iterable[j] < iterable[i] ) : ( j -= 1 ) {}
 
-        mem.swap(rtype, &iter[i], &iter[j]);
+        mem.swap(rtype, &iterable[i], &iterable[j]);
 
         i += 1;
         j = N - 1;
 
         while ( i < j ) : ({ i += 1; j -= 1; }) {
-            mem.swap(rtype, &iter[i], &iter[j]);
+            mem.swap(rtype, &iterable[i], &iterable[j]);
         }
 
         // warn("\r\n", .{});
-        for (iter) | item | {
+        for (iterable) | item | {
             // warn("{}, ", .{item});
             ans[index] = func(item);
             index += 1;
@@ -396,14 +417,14 @@ pub fn permutation_lex(
 
 }
 
-pub fn permutation(
+pub fn permutations(
     allocat: *std.mem.Allocator,
     comptime func: anytype, 
-    iter: []@typeInfo(@TypeOf(func)).Fn.args[0].arg_type.?
+    iterable: []@typeInfo(@TypeOf(func)).Fn.args[0].arg_type.?
 ) !Iterator(@typeInfo(@TypeOf(func)).Fn.args[0].arg_type.?) {
     // There are N! possible permutations of a set of cardinality N
     // The number of elements of N! such sets is N! * N => should be allocated for the result
-    var N: usize =  iter.len;
+    var N: usize =  iterable.len;
     var allocatLength: usize = @intCast(usize, fact(N) * N);
     // warn("\r\ntotal length: {}", .{N+1});
     // warn("\r\nallocat length: {}", .{allocatLength});
@@ -417,7 +438,7 @@ pub fn permutation(
     var i: usize = 0;
     var index: usize = 0;
     // warn("\r\n", .{});
-    for (iter) | item, x | {
+    for (iterable) | item, x | {
         // warn("{}, ", .{item});
         c[x] = 0;
         ans[index] = func(item);
@@ -430,13 +451,13 @@ pub fn permutation(
 
         if (c[i] < i) {
             if ( (i%2) == 0 ) {
-                mem.swap(rtype, &iter[0], &iter[i]);
+                mem.swap(rtype, &iterable[0], &iterable[i]);
             } else {
-                mem.swap(rtype, &iter[c[i]], &iter[i]);
+                mem.swap(rtype, &iterable[c[i]], &iterable[i]);
             }
 
             // warn("\r\n", .{});
-            for (iter) | item | {
+            for (iterable) | item | {
                 // warn("{}, ", .{item});
                 ans[index] = func(item);
                 index += 1;
@@ -461,10 +482,10 @@ fn mulOne1 (a: u1) u1 {
     return a * 1;
 }
 
-pub fn combination(
+pub fn combinations(
     allocat: *std.mem.Allocator,
     comptime func: anytype, 
-    iter: []@typeInfo(@TypeOf(func)).Fn.args[0].arg_type.?,
+    iterable: []@typeInfo(@TypeOf(func)).Fn.args[0].arg_type.?,
     choose: usize
 ) !Iterator(@typeInfo(@TypeOf(func)).Fn.args[0].arg_type.?) {
     // Did not find a good answer to this problem.
@@ -478,10 +499,10 @@ pub fn combination(
     // However, this is only possible if we can easily de-duplicate the permutation output, 
     // which needs a good set implementation from the language. Till then I will be making a 
     // combination function with duplicates.
-    // till then i'll be using allocatLength = fact(N) * k and allowing duplicate sets to be returned
+    // I'll be using allocatLength = fact(N) * k and allowing duplicate sets to be returned
     // from the permutation function.
 
-    var N: usize =  iter.len;
+    var N: usize =  iterable.len;
     var k: usize = choose;
     var allocatLength: usize = @intCast(usize, fact(N) * k);
     // warn("\ntotal length: {}", .{N});
@@ -508,8 +529,8 @@ pub fn combination(
     // }
 
     // Taking a bit array of n and choosing k bits, and getting all permutations
-    // of such a configuration. We will use this to generate the k-combination set of iter.
-    var res = permutation(allocat, mulOne1, c) catch unreachable;
+    // of such a configuration. We will use this to generate the k-combination set of the iterable.
+    var res = permutations(allocat, mulOne1, c) catch unreachable;
     defer res.deinit();
 
     // var bufset = std.BufSet.init(allocat);
@@ -532,7 +553,7 @@ pub fn combination(
     i = 0;
     while ( res.next() ) | item | {
         if ( (0x00 | item.*) == 1 ) {
-            ans[index] = func(iter[(i%N)]);
+            ans[index] = func(iterable[(i%N)]);
             index += 1;
         }
         i += 1;
@@ -542,7 +563,31 @@ pub fn combination(
 
 }
 
-pub fn compress() void {}
+pub fn compress(
+    allocat: *std.mem.Allocator,
+    comptime func: anytype, 
+    iterable: []@typeInfo(@TypeOf(func)).Fn.args[0].arg_type.?,
+    selectors: []bool
+) Iterator(@typeInfo(@TypeOf(func)).Fn.args[0].arg_type.?) {
+    var N: usize =  iterable.len;
+    const rtype = @typeInfo(@TypeOf(func)).Fn.args[0].arg_type.?;
+    var ans: []rtype  = allocat.alloc(rtype, iterable.len) catch unreachable;
+    defer allocat.destroy(ans.ptr);
+
+    var i: usize = 0;
+    var index: usize = 0;
+    while ( i < N ) : ( i += 1 ) {
+        if (selectors[i] == true) {
+            ans[index] = iterable[i];
+            index += 1;
+        }
+    }
+
+    _ = allocat.shrink(ans, index);
+    ans.len = index;
+
+    return Iterator(rtype).init(allocat, ans);
+}
 
 test "Reduce" {
     var A = [_]u8{1, 2, 4};
@@ -679,6 +724,17 @@ test "Dropwhile" {
     warn("\r\n", .{});
 }
 
+test "Takewhile" {
+    var A = [_]u8{1, 2, 3, 5, 'a', 1, 'b', 2, 'c', 11, 'd', 'e', 1, 3, 4};
+    var ans = [_]u8{1, 2, 3, 5};
+
+    var res = takewhile(tallocator, isLessThan10, &A);
+    defer res.deinit();
+
+    printTest(u8, &res, &ans);
+    warn("\r\n", .{});
+}
+
 test "PowerSet" {
     var A = [_]u32{1, 2, 3, 4};
     var ans = [_]u32{1, 2, 1, 2, 3, 1, 3, 2, 3, 1, 2, 3, 4, 1, 4, 2, 4, 1, 2, 4, 3, 4, 1, 3, 4, 2, 3, 4, 1, 2, 3, 4};
@@ -715,7 +771,7 @@ test "PowerSet" {
     warn("\r\n", .{});
 }
 
-test "Permutation" {
+test "Permutations" {
     var ans: u128 = fact(3);
     assertEqual(ans, 6);
     
@@ -723,13 +779,13 @@ test "Permutation" {
     var A = [_]u32{1, 2, 3};
     var ans1 = [_]u32{1, 2, 3, 1, 3, 2, 2, 1, 3, 2, 3, 1, 3, 1, 2, 3, 2, 1};
 
-    var res = permutation_lex(tallocator, mulOne32, &A) catch unreachable;
+    var res = permutations_lex(tallocator, mulOne32, &A) catch unreachable;
     defer res.deinit();
 
     printTest(u32, &res, &ans1);
 
     var A2 = [_]u32{1, 2, 3, 4, 5, 6, 7, 8, 9, 10};
-    var res1 = permutation(tallocator, mulOne32, &A2) catch unreachable;
+    var res1 = permutations(tallocator, mulOne32, &A2) catch unreachable;
     defer res1.deinit();
 
     //printTest(u32, &res, &ans1);
@@ -737,7 +793,7 @@ test "Permutation" {
     warn("\r\n", .{});
 }
 
-test "Combination" {
+test "Combinations" {
     var ans: u128 = fact(3);
     assertEqual(ans, 6);
     
@@ -746,10 +802,22 @@ test "Combination" {
     // De-duplication is possible only when a proper hash set implementation has been done in the std lib.
     var ans1 = [_]u32{1, 2, 1, 2, 2, 3, 1, 3, 1, 3, 2, 3, 2, 3, 1, 3, 1, 3, 2, 3, 1, 2, 1, 2, 1, 4, 2, 4, 2, 4, 1, 4, 3, 4, 3, 4, 3, 4, 3, 4, 1, 4, 2, 4, 2, 4, 1, 4};
 
-    var res = combination(tallocator, mulOne32, &A, 2) catch unreachable;
+    var res = combinations(tallocator, mulOne32, &A, 2) catch unreachable;
     defer res.deinit();
 
     printTest(u32, &res, &ans1);
+    warn("\r\n", .{});
+}
+
+test "Compress" {
+    var A = [_]u32{1,2,3,4,5,6,7,8};
+    var selectors = [_]bool{false, true, true, true, true, false, false, false};
+    var ans = [_]u32{2,3,4,5};
+
+    var res = compress(tallocator, mulOne32, &A, &selectors);
+    defer res.deinit();
+
+    printTest(u32, &res, &ans);
     warn("\r\n", .{});
 }
 
