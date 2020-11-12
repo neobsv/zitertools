@@ -602,7 +602,7 @@ pub fn compress(
     allocat: *std.mem.Allocator,
     comptime func: anytype, 
     iterable: []@typeInfo(@TypeOf(func)).Fn.args[0].arg_type.?,
-    selectors: []bool
+    selectors: []u1
 ) FunctionalIterator(@typeInfo(@TypeOf(func)).Fn.args[0].arg_type.?) {
     var N: usize =  iterable.len;
     const rtype = @typeInfo(@TypeOf(func)).Fn.args[0].arg_type.?;
@@ -612,7 +612,7 @@ pub fn compress(
     var i: usize = 0;
     var index: usize = 0;
     while ( i < N ) : ( i += 1 ) {
-        if (selectors[i] == true) {
+        if (selectors[i] == 1) {
             ans[index] = iterable[i];
             index += 1;
         }
@@ -844,7 +844,7 @@ test "Combinations" {
 
 test "Compress" {
     var A = [_]u32{1,2,3,4,5,6,7,8};
-    var selectors = [_]bool{false, true, true, true, true, false, false, false};
+    var selectors = [_]u1{0, 1, 1, 1, 1, 0, 0, 0};
     var ans = [_]u32{2,3,4,5};
 
     var res = compress(tallocator, mulOne32, &A, &selectors);
@@ -852,6 +852,10 @@ test "Compress" {
 
     printTest(u32, &res, &ans);
     warn("\r\n", .{});
+}
+
+test "Starmap" {
+
 }
 
 pub fn main() !void {

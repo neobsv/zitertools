@@ -51,17 +51,16 @@ Suggestions and contributions are welcome.
 
 #### Twiddle
 
-
 Note: The library does not support generators yet
 
 ## Sources
 
-### [itertools](https://docs.python.org/3/library/itertools.html#itertools-recipes)
+#### [itertools](https://docs.python.org/3/library/itertools.html#itertools-recipes)
 
-### Martin Heinz, [Tour of Python Itertools](https://martinheinz.dev/blog/16)
+#### Martin Heinz, [Tour of Python Itertools](https://martinheinz.dev/blog/16)
 
-### MITx: 6.00.2x
+#### MITx: 6.00.2x
 
-### Sedgewick R, Permutation Generation Methods, Princeton University
+#### Sedgewick R, Permutation Generation Methods, Princeton University
 
-## [ctregex](https://github.com/alexnask/ctregex.zig) by Alex Naskos
+#### [ctregex](https://github.com/alexnask/ctregex.zig) by Alex Naskos
