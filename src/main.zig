@@ -601,7 +601,7 @@ pub fn compress(
     return FunctionalIterator(rtype).init(allocat, ans);
 }
 
-pub fn cartesian_product(
+pub fn product(
     allocat: *std.mem.Allocator,
     comptime T: type,
     iterables: []const []const T
@@ -622,17 +622,19 @@ pub fn cartesian_product(
     defer allocat.destroy(ans.ptr);
 
     var i: usize = 0;
+    var j: usize = 0;
     var k: usize = N - 1;
+    var flag: u1 = 1;
     var index: usize = 0;
     while( i < totalLength ) : ( i += 1 ) {
-        var j: usize = 0;
+        j = 0;
         while ( j < N ) : ( j += 1 ) {
             ans[index] = iterables[j][indices.items[j]];
             index += 1;
         }
 
         k = N - 1;
-        var flag: u1 = 1;
+        flag = 1;
         while ( k >= 0 and flag > 0 ) {
             indices.items[k] = (indices.items[k]+1) % iterables[k].len;
             if ( indices.items[k] != 0 ) {
@@ -880,7 +882,7 @@ test "Cartesian Product" {
     };
 
     var ans = [_]u8{'a',  'x',  'd',  't',  'a',  'x',  'd',  'v',  'a',  'x',  'd',  'r',  'a',  'x',  'e',  't',  'a',  'x',  'e',  'v',  'a',  'x',  'e',  'r',  'a',  'x',  'f',  't',  'a',  'x',  'f',  'v',  'a',  'x',  'f',  'r',  'a',  'x',  'l',  't',  'a',  'x',  'l',  'v',  'a',  'x',  'l',  'r',  'a',  'x',  'm',  't',  'a',  'x',  'm',  'v',  'a',  'x',  'm',  'r',  'a',  'y',  'd',  't',  'a',  'y',  'd',  'v',  'a',  'y',  'd',  'r',  'a',  'y',  'e',  't',  'a',  'y',  'e',  'v',  'a',  'y',  'e',  'r',  'a',  'y',  'f',  't',  'a',  'y',  'f',  'v',  'a',  'y',  'f',  'r',  'a',  'y',  'l',  't',  'a',  'y',  'l',  'v',  'a',  'y',  'l',  'r',  'a',  'y',  'm',  't',  'a',  'y',  'm',  'v',  'a',  'y',  'm',  'r',  'b',  'x',  'd',  't',  'b',  'x',  'd',  'v',  'b',  'x',  'd',  'r',  'b',  'x',  'e',  't',  'b',  'x',  'e',  'v',  'b',  'x',  'e',  'r',  'b',  'x',  'f',  't',  'b',  'x',  'f',  'v',  'b',  'x',  'f',  'r',  'b',  'x',  'l',  't',  'b',  'x',  'l',  'v',  'b',  'x',  'l',  'r',  'b',  'x',  'm',  't',  'b',  'x',  'm',  'v',  'b',  'x',  'm',  'r',  'b',  'y',  'd',  't',  'b',  'y',  'd',  'v',  'b',  'y',  'd',  'r',  'b',  'y',  'e',  't',  'b',  'y',  'e',  'v',  'b',  'y',  'e',  'r',  'b',  'y',  'f',  't',  'b',  'y',  'f',  'v',  'b',  'y',  'f',  'r',  'b',  'y',  'l',  't',  'b',  'y',  'l',  'v',  'b',  'y',  'l',  'r',  'b',  'y',  'm',  't',  'b',  'y',  'm',  'v',  'b',  'y',  'm',  'r',  'c',  'x',  'd',  't',  'c',  'x',  'd',  'v',  'c',  'x',  'd',  'r',  'c',  'x',  'e',  't',  'c',  'x',  'e',  'v',  'c',  'x',  'e',  'r',  'c',  'x',  'f',  't',  'c',  'x',  'f',  'v',  'c',  'x',  'f',  'r',  'c',  'x',  'l',  't',  'c',  'x',  'l',  'v',  'c',  'x',  'l',  'r',  'c',  'x',  'm',  't',  'c',  'x',  'm',  'v',  'c',  'x',  'm',  'r',  'c',  'y',  'd',  't',  'c',  'y',  'd',  'v',  'c',  'y',  'd',  'r',  'c',  'y',  'e',  't',  'c',  'y',  'e',  'v',  'c',  'y',  'e',  'r',  'c',  'y',  'f',  't',  'c',  'y',  'f',  'v',  'c',  'y',  'f',  'r',  'c',  'y',  'l',  't',  'c',  'y',  'l',  'v',  'c',  'y',  'l',  'r',  'c',  'y',  'm',  't',  'c',  'y',  'm',  'v',  'c',  'y',  'm',  'r'};
-    var res = cartesian_product(tallocator, u8, A) catch unreachable;
+    var res = product(tallocator, u8, A) catch unreachable;
     defer res.deinit();
 
     printTest(u8, &res, &ans);
