@@ -141,3 +141,42 @@ test "Filter" {
     }
     warn("\r\n", .{});
 }
+
+fn mul32 (comptime a: u32, comptime b: u32) u32 {
+    return a * b;
+}
+
+pub fn starmap(
+    comptime func: anytype, 
+    comptime iterables: []const []const @typeInfo(@TypeOf(func)).Fn.args[0].arg_type.?
+) CTIterator(@typeInfo(@TypeOf(func)).Fn.args[0].arg_type.?) {
+    const N: usize =  iterables.len;
+    const rtype = @typeInfo(@TypeOf(func)).Fn.args[0].arg_type.?;
+    comptime var ans: []const rtype  = &[0]rtype{};
+
+    comptime var i: usize = 0;
+    comptime var args = .{};
+    inline while ( i < N ) : ( i += 1 ) {
+        var a = @call(.{}, mul32,  .{1, 2} );
+        ans = ans ++ &[1]rtype{ a  };
+    }
+
+    return CTIterator(rtype).init(ans);
+}
+
+// test "Starmap" {
+//     comptime {
+//         comptime var A = &[_][]const u32{ 
+//             &[_]u32{1, 2}, 
+//             &[_]u32{3, 4}
+//         };
+//         comptime var ans = [_]u32{2, 12};
+
+//         comptime var res = starmap(mul32, A);
+//         defer res.deinit();
+
+//         //printTest(u32, &res, &ans);
+//     }
+
+//     warn("\r\n", .{});
+// }

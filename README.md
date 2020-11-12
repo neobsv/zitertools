@@ -51,6 +51,8 @@ Suggestions and contributions are welcome.
 
 #### Twiddle
 
+### Product
+
 Note: The library does not support generators yet
 
 ## Sources
