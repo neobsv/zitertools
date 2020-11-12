@@ -614,19 +614,15 @@ pub fn cartesian_product(
     var indices = std.ArrayList(usize).init(allocat);
     defer indices.deinit();
 
-    var lens = std.ArrayList(usize).init(allocat);
-    defer lens.deinit();
-
     for (iterables) | iterable | { 
         totalLength *= iterable.len;
         _ = try indices.append(0);
-        _ = try lens.append(iterable.len);
     }
     var ans: []T  = allocat.alloc(T, totalLength*N) catch unreachable;
     defer allocat.destroy(ans.ptr);
 
     var i: usize = 0;
-    var k: usize = 0;
+    var k: usize = N - 1;
     var index: usize = 0;
     while( i < totalLength ) : ( i += 1 ) {
         var j: usize = 0;
@@ -638,11 +634,13 @@ pub fn cartesian_product(
         k = N - 1;
         var flag: u1 = 1;
         while ( k >= 0 and flag > 0 ) {
-            indices.items[k] = (indices.items[k]+1) % lens.items[k];
+            indices.items[k] = (indices.items[k]+1) % iterables[k].len;
             if ( indices.items[k] != 0 ) {
                 flag = 0;    
             }
-            if ( k > 0 ) { k -= 1; }
+            if ( k > 0 ) { 
+                k -= 1; 
+            }
         }
 
     }
