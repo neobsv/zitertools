@@ -294,9 +294,7 @@ fn recurranceRelation(N: usize) !usize {
     if ( N > 5 ) {
         var i: usize = 6;
         while (i < N+1) : ( i += 1 ) {
-            var term: usize = (2 * i * T) / (i-1);
-            T = term;
-            // warn("\r\n term: {} ", .{term});
+            T = (2 * i * T) / (i-1);
         }
     }
     return T;
@@ -312,10 +310,8 @@ pub fn powerset(
     // this is given by the recurrance relation T(N) = 2*N*T(N-1)//(N-1) => should be the allocated length
     // a func needs to be constructed to get the result of the above recurrance relation.
     // Source: the recurrance relation is mine, and the powerset algorithm is from MITx: 6.00.2x
-    var totalLength: usize =  @intCast(usize, 1) << @truncate(std.math.Log2Int(usize), iterable.len);
-    var allocatLength: usize = recurranceRelation(iterable.len) catch unreachable;
-    // warn("\r\ntotal length: {}", .{totalLength});
-    // warn("\r\nallocat length: {}", .{allocatLength});
+    const totalLength: usize =  @intCast(usize, 1) << @truncate(std.math.Log2Int(usize), iterable.len);
+    const allocatLength: usize = recurranceRelation(iterable.len) catch unreachable;
     const rtype = @typeInfo(@TypeOf(func)).Fn.args[0].arg_type.?;
     var ans: []rtype  = allocat.alloc(rtype, allocatLength) catch unreachable;
     defer allocat.free(ans);
@@ -330,10 +326,8 @@ pub fn powerset(
             if ( ( ( i >> @truncate(std.math.Log2Int(usize), j) ) % 2 ) == 1 ) {
                 ans[index] = func(iterable[j]);
                 index += 1;
-                // warn(" {},", .{iterable[j]});
             }
         }
-        // warn("\r\n =========== ", .{});
     }
 
     return FunctionalIterator(rtype).init(allocat, ans);
@@ -367,26 +361,21 @@ pub fn permutations_lex(
 ) !FunctionalIterator(@typeInfo(@TypeOf(func)).Fn.args[0].arg_type.?) {
     // There are N! possible permutations of a set of cardinality N
     // The number of elements of N! such sets is N! * N => should be allocated for the result
-    var N: usize =  iterable.len;
-    var allocatLength: usize = @intCast(usize, fact(N) * N);
-    // warn("\r\ntotal length: {}", .{N});
-    // warn("\r\nallocat length: {}", .{allocatLength});
+    const N: usize =  iterable.len;
+    const allocatLength: usize = @intCast(usize, fact(N) * N);
     const rtype = @typeInfo(@TypeOf(func)).Fn.args[0].arg_type.?;
     var ans: []rtype  = allocat.alloc(rtype, allocatLength) catch unreachable;
     defer allocat.free(ans);
 
     var index: usize = 0;
-    //warn("\r\n", .{});
     for (iterable) | item | {
-        //warn("{}, ", .{item});
         ans[index] = func(item);
         index += 1;
     }
-    //warn("\r\n", .{});
+
     
     var c: u128 = 0;
     var numSets: u128 = fact(N) - 1;
-    // warn("\r\n num sets: {}", .{numSets});
 
     while ( c < numSets ) : ( c += 1 ) {
         var i: usize = N - 2;
@@ -404,13 +393,10 @@ pub fn permutations_lex(
             mem.swap(rtype, &iterable[i], &iterable[j]);
         }
 
-        // warn("\r\n", .{});
         for (iterable) | item | {
-            // warn("{}, ", .{item});
             ans[index] = func(item);
             index += 1;
         }
-        // warn("\r\n", .{});
     }
 
     return FunctionalIterator(rtype).init(allocat, ans);
@@ -424,10 +410,8 @@ pub fn permutations(
 ) !FunctionalIterator(@typeInfo(@TypeOf(func)).Fn.args[0].arg_type.?) {
     // There are N! possible permutations of a set of cardinality N
     // The number of elements of N! such sets is N! * N => should be allocated for the result
-    var N: usize =  iterable.len;
-    var allocatLength: usize = @intCast(usize, fact(N) * N);
-    // warn("\r\ntotal length: {}", .{N+1});
-    // warn("\r\nallocat length: {}", .{allocatLength});
+    const N: usize =  iterable.len;
+    const allocatLength: usize = @intCast(usize, fact(N) * N);
     const rtype = @typeInfo(@TypeOf(func)).Fn.args[0].arg_type.?;
     var ans: []rtype  = allocat.alloc(rtype, allocatLength) catch unreachable;
     defer allocat.free(ans);
@@ -437,15 +421,11 @@ pub fn permutations(
 
     var i: usize = 0;
     var index: usize = 0;
-    // warn("\r\n", .{});
     for (iterable) | item, x | {
-        // warn("{}, ", .{item});
         c[x] = 0;
         ans[index] = func(item);
         index += 1;
     }
-    // warn("\r\n", .{});
-    
 
     while ( i < N ) {
 
@@ -456,13 +436,10 @@ pub fn permutations(
                 mem.swap(rtype, &iterable[c[i]], &iterable[i]);
             }
 
-            // warn("\r\n", .{});
             for (iterable) | item | {
-                // warn("{}, ", .{item});
                 ans[index] = func(item);
                 index += 1;
             }
-            // warn("\r\n", .{});
 
             c[i] += 1;
             i = 0;
@@ -536,9 +513,9 @@ pub fn combinations(
     // There will be nCk sets of k elements each, so the total memory that needs to be allocated
     // is nCk * k for all the elements. allocatLength = ( fact(N) / (fact(k) * fact(N-k)) ) * k
 
-    var N: usize =  iterable.len;
-    var k: usize = choose;
-    var allocatLength: usize = @intCast(usize, ( fact(N) / (fact(k) * fact(N-k)) ) * k);
+    const N: usize =  iterable.len;
+    const k: usize = choose;
+    const allocatLength: usize = @intCast(usize, ( fact(N) / (fact(k) * fact(N-k)) ) * k);
     const rtype = @typeInfo(@TypeOf(func)).Fn.args[0].arg_type.?;
     var ans: []rtype  = allocat.alloc(rtype, allocatLength) catch unreachable;
     defer allocat.free(ans);
@@ -585,7 +562,7 @@ pub fn combinations(
         bit = 0x01;
         while ( j < N ) {
             if ( (bit & item.key ) >= 1 ) {
-                ans[index] = iterable[j];
+                ans[index] = func(iterable[j]);
                 index += 1;
             }
             bit <<=1;
@@ -604,22 +581,55 @@ pub fn compress(
     iterable: []@typeInfo(@TypeOf(func)).Fn.args[0].arg_type.?,
     selectors: []u1
 ) FunctionalIterator(@typeInfo(@TypeOf(func)).Fn.args[0].arg_type.?) {
-    var N: usize =  iterable.len;
+    const N: usize =  iterable.len;
     const rtype = @typeInfo(@TypeOf(func)).Fn.args[0].arg_type.?;
-    var ans: []rtype  = allocat.alloc(rtype, iterable.len) catch unreachable;
+    var ans: []rtype  = allocat.alloc(rtype, N) catch unreachable;
     defer allocat.destroy(ans.ptr);
 
     var i: usize = 0;
     var index: usize = 0;
     while ( i < N ) : ( i += 1 ) {
         if (selectors[i] == 1) {
-            ans[index] = iterable[i];
+            ans[index] = func(iterable[i]);
             index += 1;
         }
     }
 
     _ = allocat.shrink(ans, index);
     ans.len = index;
+
+    return FunctionalIterator(rtype).init(allocat, ans);
+}
+
+fn mul32 (a: u32, b: u32) u32 {
+    return a * b;
+}
+
+pub fn starmap(
+    allocat: *std.mem.Allocator,
+    comptime func: anytype, 
+    iterables: []const []const @typeInfo(@TypeOf(func)).Fn.args[0].arg_type.?
+) FunctionalIterator(@typeInfo(@TypeOf(func)).Fn.args[0].arg_type.?) {
+    const N: usize =  iterables.len;
+    const rtype = @typeInfo(@TypeOf(func)).Fn.args[0].arg_type.?;
+    var ans: []rtype  = allocat.alloc(rtype, N) catch unreachable;
+    defer allocat.destroy(ans.ptr);
+
+    var i: usize = 0;
+    var index: usize = 0;
+    while ( i < N ) : ( i += 1 ) {
+        const args = .{};
+        const Ni: usize = iterables[i].len;
+        var item = iterables[i];
+        comptime {
+            var j: usize = 0;
+            while ( j < Ni ) : ( j += 1 ) {
+                args = args ++ .{ item[j] };
+            }
+        }
+        ans[index] = @call(.{}, func, args);
+        index += 1;
+    }
 
     return FunctionalIterator(rtype).init(allocat, ans);
 }
@@ -777,9 +787,6 @@ test "PowerSet" {
     var res = powerset(tallocator, mulOne32, &A) catch unreachable;
     defer res.deinit();
 
-    // warn("\r\n iterlen: {} ", .{res.len});
-    // warn("\r\n anslen: {}", .{ans.len});
-
     printTest(u32, &res, &ans);
 
     var A1 = [_]u32{1, 2, 3};
@@ -788,17 +795,12 @@ test "PowerSet" {
     var res1 = powerset(tallocator, mulOne32, &A1) catch unreachable;
     defer res1.deinit();
 
-    // warn("\r\n iterlen: {} ", .{res1.len});
-    // warn("\r\n anslen: {}", .{ans1.len});
-
     printTest(u32, &res1, &ans1);
 
     var A2 = [_]u32{1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15};
 
     var res2 = powerset(tallocator, mulOne32, &A2) catch unreachable;
     defer res2.deinit();
-
-    // warn("\r\n iterlen: {} ", .{res2.len});
 
     const allocLength: usize = recurranceRelation(A2.len) catch unreachable;
     assertEqual(res2.len, allocLength);
@@ -823,7 +825,7 @@ test "Permutations" {
     var res1 = permutations(tallocator, mulOne32, &A2) catch unreachable;
     defer res1.deinit();
 
-    //printTest(u32, &res, &ans1);
+   // printTest(u32, &res, &ans1);
 
     warn("\r\n", .{});
 }
@@ -843,7 +845,7 @@ test "Combinations" {
 }
 
 test "Compress" {
-    var A = [_]u32{1,2,3,4,5,6,7,8};
+    var A = [_]u32{1, 2, 3, 4, 5, 6, 7, 8};
     var selectors = [_]u1{0, 1, 1, 1, 1, 0, 0, 0};
     var ans = [_]u32{2,3,4,5};
 
@@ -854,9 +856,20 @@ test "Compress" {
     warn("\r\n", .{});
 }
 
-test "Starmap" {
+// test "Starmap" {
+//     var A = &[_][]const u32{ 
+//         &[_]u32{1, 2}, 
+//         &[_]u32{3, 4}
+//     };
+//     var ans = [_]u32{2, 12};
 
-}
+//     var res = starmap(tallocator, mulOne32, A);
+//     defer res.deinit();
+
+//     printTest(u32, &res, &ans);
+
+//     warn("\r\n", .{});
+// }
 
 pub fn main() !void {
     var A2 = [_]u32{1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15};
