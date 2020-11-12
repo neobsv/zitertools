@@ -63,3 +63,5 @@ Note: The library does not support generators yet
 ### MITx: 6.00.2x
 
 ### Sedgewick R, Permutation Generation Methods, Princeton University
+
+## [ctregex](https://github.com/alexnask/ctregex.zig) by Alex Naskos

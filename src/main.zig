@@ -23,7 +23,7 @@ fn mul8(a: u8, b: u8) u8 {
     return a * b; 
 }
 
-pub fn Iterator(comptime T: type) type {
+pub fn FunctionalIterator(comptime T: type) type {
     return struct {
         allocator: *std.mem.Allocator,
         items: []const T,
@@ -59,7 +59,7 @@ pub fn Iterator(comptime T: type) type {
     };
 }
 
-fn printTest(comptime T: type, iter: *Iterator(T), ans: []T) void{
+fn printTest(comptime T: type, iter: *FunctionalIterator(T), ans: []T) void{
     var i: usize = 0;
     while (iter.next()) | item | {
         //warn("\r\n ans: {} item: {} ", .{ans[i], item.*});
@@ -73,7 +73,7 @@ pub fn map(
     allocat: *std.mem.Allocator,
     comptime func: anytype, 
     iterable: []@typeInfo(@TypeOf(func)).Fn.args[0].arg_type.?
-) Iterator(@typeInfo(@TypeOf(func)).Fn.args[0].arg_type.?) {
+) FunctionalIterator(@typeInfo(@TypeOf(func)).Fn.args[0].arg_type.?) {
     const rtype = @typeInfo(@TypeOf(func)).Fn.args[0].arg_type.?;
     var ans: []rtype  = allocat.alloc(rtype, iterable.len) catch unreachable;
     defer allocat.destroy(ans.ptr);
@@ -82,7 +82,7 @@ pub fn map(
         ans[i] =  func(item);
     }
 
-    return Iterator(rtype).init(allocat, ans);
+    return FunctionalIterator(rtype).init(allocat, ans);
 }
 
 fn addOne(a: u8) u8 {
@@ -93,7 +93,7 @@ pub fn filter(
     allocat: *std.mem.Allocator,
     comptime func: anytype, 
     iterable: []@typeInfo(@TypeOf(func)).Fn.args[0].arg_type.?
-) Iterator(@typeInfo(@TypeOf(func)).Fn.args[0].arg_type.?) {
+) FunctionalIterator(@typeInfo(@TypeOf(func)).Fn.args[0].arg_type.?) {
     const rtype = @typeInfo(@TypeOf(func)).Fn.args[0].arg_type.?;
     var ans: []rtype  = allocat.alloc(rtype, iterable.len) catch unreachable;
     defer allocat.destroy(ans.ptr);
@@ -109,7 +109,7 @@ pub fn filter(
     _ = allocat.shrink(ans, j);
     ans.len = j;
 
-    return Iterator(rtype).init(allocat, ans);
+    return FunctionalIterator(rtype).init(allocat, ans);
 }
 
 fn isLessThan10(a: u8) bool {
@@ -124,7 +124,7 @@ pub fn accumulate(
     comptime func: anytype, 
     iterable: []@typeInfo(@TypeOf(func)).Fn.args[0].arg_type.?,
     comptime init: @typeInfo(@TypeOf(func)).Fn.args[0].arg_type.?
-) Iterator(@typeInfo(@TypeOf(func)).Fn.return_type.?) {
+) FunctionalIterator(@typeInfo(@TypeOf(func)).Fn.return_type.?) {
     const rtype = @typeInfo(@TypeOf(func)).Fn.return_type.?;
     var ans: []rtype  = allocat.alloc(rtype, iterable.len) catch unreachable;
     defer allocat.destroy(ans.ptr);
@@ -136,7 +136,7 @@ pub fn accumulate(
         ans[i] =  func(ans[i-1], iterable[i]);
     }
 
-    return Iterator(rtype).init(allocat, ans);
+    return FunctionalIterator(rtype).init(allocat, ans);
 }
 
 fn add(a: u32, b:u32) u32 {
@@ -151,7 +151,7 @@ pub fn chain(
     allocat: *std.mem.Allocator,
     comptime func: anytype,
     iterables: []const []const @typeInfo(@TypeOf(func)).Fn.args[0].arg_type.?
-) Iterator(@typeInfo(@TypeOf(func)).Fn.return_type.?) {
+) FunctionalIterator(@typeInfo(@TypeOf(func)).Fn.return_type.?) {
     var totalLength: usize = 0;
     for (iterables) | iterable | { totalLength += iterable.len; }
     const rtype = @typeInfo(@TypeOf(func)).Fn.return_type.?;
@@ -165,7 +165,7 @@ pub fn chain(
             index += 1; 
         }
     }
-    return Iterator(rtype).init(allocat, ans);
+    return FunctionalIterator(rtype).init(allocat, ans);
 }
 
 fn addOne8(a: i32) i32 {
@@ -216,7 +216,7 @@ pub fn filterfalse(
     allocat: *std.mem.Allocator,
     comptime func: anytype, 
     iterable: []@typeInfo(@TypeOf(func)).Fn.args[0].arg_type.?
-) Iterator(@typeInfo(@TypeOf(func)).Fn.args[0].arg_type.?) {
+) FunctionalIterator(@typeInfo(@TypeOf(func)).Fn.args[0].arg_type.?) {
     const rtype = @typeInfo(@TypeOf(func)).Fn.args[0].arg_type.?;
     var ans: []rtype  = allocat.alloc(rtype, iterable.len) catch unreachable;
     defer allocat.destroy(ans.ptr);
@@ -232,14 +232,14 @@ pub fn filterfalse(
     _ = allocat.shrink(ans, j);
     ans.len = j;
 
-    return Iterator(rtype).init(allocat, ans);
+    return FunctionalIterator(rtype).init(allocat, ans);
 }
 
 pub fn dropwhile(
     allocat: *std.mem.Allocator,
     comptime func: anytype, 
     iterable: []@typeInfo(@TypeOf(func)).Fn.args[0].arg_type.?
-) Iterator(@typeInfo(@TypeOf(func)).Fn.args[0].arg_type.?) {
+) FunctionalIterator(@typeInfo(@TypeOf(func)).Fn.args[0].arg_type.?) {
     var totalLength: usize = iterable.len;
     const rtype = @typeInfo(@TypeOf(func)).Fn.args[0].arg_type.?;
     var ans: []rtype  = allocat.alloc(rtype, totalLength) catch unreachable;
@@ -256,14 +256,14 @@ pub fn dropwhile(
     _ = allocat.shrink(ans, j);
     ans.len = j;
 
-    return Iterator(rtype).init(allocat, ans);
+    return FunctionalIterator(rtype).init(allocat, ans);
 }
 
 pub fn takewhile(
     allocat: *std.mem.Allocator,
     comptime func: anytype, 
     iterable: []@typeInfo(@TypeOf(func)).Fn.args[0].arg_type.?
-) Iterator(@typeInfo(@TypeOf(func)).Fn.args[0].arg_type.?) {
+) FunctionalIterator(@typeInfo(@TypeOf(func)).Fn.args[0].arg_type.?) {
     var totalLength: usize = iterable.len;
     const rtype = @typeInfo(@TypeOf(func)).Fn.args[0].arg_type.?;
     var ans: []rtype  = allocat.alloc(rtype, totalLength) catch unreachable;
@@ -277,7 +277,7 @@ pub fn takewhile(
     _ = allocat.shrink(ans, i);
     ans.len = i;
 
-    return Iterator(rtype).init(allocat, ans);
+    return FunctionalIterator(rtype).init(allocat, ans);
 }
 
 fn recurranceRelation(N: usize) !usize {
@@ -306,7 +306,7 @@ pub fn powerset(
     allocat: *std.mem.Allocator,
     comptime func: anytype, 
     iterable: []@typeInfo(@TypeOf(func)).Fn.args[0].arg_type.?
-) !Iterator(@typeInfo(@TypeOf(func)).Fn.args[0].arg_type.?) {
+) !FunctionalIterator(@typeInfo(@TypeOf(func)).Fn.args[0].arg_type.?) {
     // Total number of sets is pow(2, iterable.len)
     // the total number of elements can be calculated by (N*1) + ((N-1)*2) + ((N-2)*3) ... + (2*(N-1)) + (1*N)
     // this is given by the recurrance relation T(N) = 2*N*T(N-1)//(N-1) => should be the allocated length
@@ -336,7 +336,7 @@ pub fn powerset(
         // warn("\r\n =========== ", .{});
     }
 
-    return Iterator(rtype).init(allocat, ans);
+    return FunctionalIterator(rtype).init(allocat, ans);
 
 }
 
@@ -364,7 +364,7 @@ pub fn permutations_lex(
     allocat: *std.mem.Allocator,
     comptime func: anytype, 
     iterable: []@typeInfo(@TypeOf(func)).Fn.args[0].arg_type.?
-) !Iterator(@typeInfo(@TypeOf(func)).Fn.args[0].arg_type.?) {
+) !FunctionalIterator(@typeInfo(@TypeOf(func)).Fn.args[0].arg_type.?) {
     // There are N! possible permutations of a set of cardinality N
     // The number of elements of N! such sets is N! * N => should be allocated for the result
     var N: usize =  iterable.len;
@@ -413,7 +413,7 @@ pub fn permutations_lex(
         // warn("\r\n", .{});
     }
 
-    return Iterator(rtype).init(allocat, ans);
+    return FunctionalIterator(rtype).init(allocat, ans);
 
 }
 
@@ -421,7 +421,7 @@ pub fn permutations(
     allocat: *std.mem.Allocator,
     comptime func: anytype, 
     iterable: []@typeInfo(@TypeOf(func)).Fn.args[0].arg_type.?
-) !Iterator(@typeInfo(@TypeOf(func)).Fn.args[0].arg_type.?) {
+) !FunctionalIterator(@typeInfo(@TypeOf(func)).Fn.args[0].arg_type.?) {
     // There are N! possible permutations of a set of cardinality N
     // The number of elements of N! such sets is N! * N => should be allocated for the result
     var N: usize =  iterable.len;
@@ -474,7 +474,7 @@ pub fn permutations(
 
     }
 
-    return Iterator(rtype).init(allocat, ans);
+    return FunctionalIterator(rtype).init(allocat, ans);
 
 }
 
@@ -482,12 +482,52 @@ fn mulOne1 (a: u1) u1 {
     return a * 1;
 }
 
+pub fn HashSet(comptime T: type) type {
+    return struct {
+        set: std.AutoHashMap(T, void),
+        len: usize,
+        allocat: *mem.Allocator,
+
+        const Self = @This();
+
+        pub fn init(alloc: *mem.Allocator) Self {
+            return Self {
+                .set = std.AutoHashMap(T, void).init(alloc),
+                .len = 0,
+                .allocat = alloc,
+            };
+        }
+
+        pub fn deinit(self: *Self) void {
+            self.set.deinit();
+        }
+
+        pub fn contains(self: *Self, elem: T) bool {
+            return self.set.contains(elem);
+        }
+
+        pub fn put(self: *Self, elem: T) !void {
+            if ( !self.set.contains(elem) ) {
+                try self.set.put(elem, .{});
+            }
+        }
+
+        pub fn count(self: *Self) usize {
+            return self.len;
+        }
+
+        pub fn iterator(self: *const Self) std.AutoHashMap(T, void).Iterator {
+            return self.set.iterator();
+        }
+    };
+}
+
 pub fn combinations(
     allocat: *std.mem.Allocator,
     comptime func: anytype, 
     iterable: []@typeInfo(@TypeOf(func)).Fn.args[0].arg_type.?,
     choose: usize
-) !Iterator(@typeInfo(@TypeOf(func)).Fn.args[0].arg_type.?) {
+) !FunctionalIterator(@typeInfo(@TypeOf(func)).Fn.args[0].arg_type.?) {
     // Did not find a good answer to this problem.
     // Will be using permutation for this, and making a bit array of size iter.len (n)
     // Out of this we can set k bits to simulate n choose k, and generate all permutations
@@ -496,17 +536,9 @@ pub fn combinations(
     // There will be nCk sets of k elements each, so the total memory that needs to be allocated
     // is nCk * k for all the elements. allocatLength = ( fact(N) / (fact(k) * fact(N-k)) ) * k
 
-    // However, this is only possible if we can easily de-duplicate the permutation output, 
-    // which needs a good set implementation from the language. Till then I will be making a 
-    // combination function with duplicates.
-    // I'll be using allocatLength = fact(N) * k and allowing duplicate sets to be returned
-    // from the permutation function.
-
     var N: usize =  iterable.len;
     var k: usize = choose;
-    var allocatLength: usize = @intCast(usize, fact(N) * k);
-    // warn("\ntotal length: {}", .{N});
-    // warn("\nallocat length: {}\n", .{allocatLength});
+    var allocatLength: usize = @intCast(usize, ( fact(N) / (fact(k) * fact(N-k)) ) * k);
     const rtype = @typeInfo(@TypeOf(func)).Fn.args[0].arg_type.?;
     var ans: []rtype  = allocat.alloc(rtype, allocatLength) catch unreachable;
     defer allocat.free(ans);
@@ -523,43 +555,46 @@ pub fn combinations(
         }
     }
 
-    // i = 0;
-    // while( i < N ) : ( i += 1 ) {
-    //     warn("combo init: {} \n", .{c[i]});
-    // }
-
     // Taking a bit array of n and choosing k bits, and getting all permutations
     // of such a configuration. We will use this to generate the k-combination set of the iterable.
     var res = permutations(allocat, mulOne1, c) catch unreachable;
     defer res.deinit();
 
-    // var bufset = std.BufSet.init(allocat);
-    // defer bufset.deinit();
-
-    // var buf = "";
-
-    // while ( res.next() ) | item | {
-    //     if ( (N % 4) == 0 ) {
-    //         buf = "";
-    //     }
-    //     buf += ( 0x00 | item.*);
-    //     try bufset.put( buf );
-    //     warn("combo: {}\n", .{ (0x00 | item.*) });
-    // }
-
-    // warn("combo len % 4: {}", .{res.len});
-
-    var index: usize = 0;
+    var bufset = HashSet(u8).init(allocat);
+    defer bufset.deinit();
+    var buffer: u8 = 0x00;
     i = 0;
     while ( res.next() ) | item | {
-        if ( (0x00 | item.*) == 1 ) {
-            ans[index] = func(iterable[(i%N)]);
-            index += 1;
+        if ( (i != 0) and (i % N) == 0 ) {
+            try bufset.put( buffer );
+            buffer = 0x00;
+        }
+        buffer <<= 1;
+        buffer += (0x00 | item.*);
+        i += 1;
+    }
+
+
+    i = 0;
+    var j: usize = 0;
+    var bit: u8 = 0x01;
+    var index: usize = 0;
+    var it = bufset.iterator();
+    while ( it.next() ) | item | {
+        j = 0;
+        bit = 0x01;
+        while ( j < N ) {
+            if ( (bit & item.key ) >= 1 ) {
+                ans[index] = iterable[j];
+                index += 1;
+            }
+            bit <<=1;
+            j += 1;
         }
         i += 1;
     }
 
-    return Iterator(rtype).init(allocat, ans);
+    return FunctionalIterator(rtype).init(allocat, ans);
 
 }
 
@@ -568,7 +603,7 @@ pub fn compress(
     comptime func: anytype, 
     iterable: []@typeInfo(@TypeOf(func)).Fn.args[0].arg_type.?,
     selectors: []bool
-) Iterator(@typeInfo(@TypeOf(func)).Fn.args[0].arg_type.?) {
+) FunctionalIterator(@typeInfo(@TypeOf(func)).Fn.args[0].arg_type.?) {
     var N: usize =  iterable.len;
     const rtype = @typeInfo(@TypeOf(func)).Fn.args[0].arg_type.?;
     var ans: []rtype  = allocat.alloc(rtype, iterable.len) catch unreachable;
@@ -586,7 +621,7 @@ pub fn compress(
     _ = allocat.shrink(ans, index);
     ans.len = index;
 
-    return Iterator(rtype).init(allocat, ans);
+    return FunctionalIterator(rtype).init(allocat, ans);
 }
 
 test "Reduce" {
@@ -597,7 +632,7 @@ test "Reduce" {
     warn("\r\n", .{});
 }
 
-test "Iterator" {
+test "FunctionalIterator" {
 
     var A: []u8 = tallocator.alloc(u8, 10) catch unreachable;
     defer tallocator.destroy(A.ptr);
@@ -606,7 +641,7 @@ test "Iterator" {
     while ( i < 10 ) : ( i += 1 ) {
         A[i] = i;
     } 
-    var iter = Iterator(u8).init(tallocator, A);
+    var iter = FunctionalIterator(u8).init(tallocator, A);
     defer iter.deinit();
 
     printTest(u8, &iter, A);
@@ -618,7 +653,7 @@ test "Iterator" {
     while ( i < 10 ) : ( i += 1 ) {
         _ = try B.append(i*2);
     } 
-    var iter2 = Iterator(u8).init(tallocator, B.items);
+    var iter2 = FunctionalIterator(u8).init(tallocator, B.items);
     defer iter2.deinit();
 
     printTest(u8, &iter2, B.items);
@@ -798,9 +833,7 @@ test "Combinations" {
     assertEqual(ans, 6);
     
     var A = [_]u32{1, 2, 3, 4};
-    // consider elements of ans in pairs, and duplicates are present which need to be removed.
-    // De-duplication is possible only when a proper hash set implementation has been done in the std lib.
-    var ans1 = [_]u32{1, 2, 1, 2, 2, 3, 1, 3, 1, 3, 2, 3, 2, 3, 1, 3, 1, 3, 2, 3, 1, 2, 1, 2, 1, 4, 2, 4, 2, 4, 1, 4, 3, 4, 3, 4, 3, 4, 3, 4, 1, 4, 2, 4, 2, 4, 1, 4};
+    var ans1 = [_]u32{2, 3, 2, 4, 1, 4, 3, 4, 1, 3, 1, 2};
 
     var res = combinations(tallocator, mulOne32, &A, 2) catch unreachable;
     defer res.deinit();
