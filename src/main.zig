@@ -501,14 +501,14 @@ pub fn combinations(
     defer bufset.deinit();
     var buffer = std.ArrayList(u8).init(allocat);
     defer buffer.deinit();
-    try buffer.ensureCapacity(N);
-    
+    try buffer.resize(N);
+
     i = 0;
     while ( res.next() ) | item | {
         if ( (i != 0) and (i % N) == 0 ) {
             if ( ! bufset.contains(buffer.items) ) {
                 try bufset.put( buffer.toOwnedSlice(), .{} );
-                try buffer.ensureCapacity(N);
+                try buffer.resize(N);
             } else {
                 buffer.shrinkRetainingCapacity(0);
             }
@@ -528,12 +528,17 @@ pub fn combinations(
         while ( j < N ) {
             if ( (bit & buf.key[j]) >= 1 ) {
                 ans[index] = func(iterable[j]);
-                // warn(" {},", .{ans[index]});
                 index += 1;
             }
             j += 1;
         }
         i += 1;
+    }
+
+    // Deinit all the keys of the bufset.
+    it = bufset.iterator();
+    while ( it.next() ) | buf | {
+        allocat.free(buf.key);
     }
 
     return FunctionalIterator(rtype).init(allocat, ans);
@@ -817,7 +822,7 @@ test "Combinations" {
     assertEqual(ans, 6);
     
     var A = [_]u32{1, 2, 3, 4};
-    var ans1 = [_]u32{2, 4, 1, 3, 1, 4, 1, 2, 2, 3, 3, 4};
+    var ans1 = [_]u32{1, 3, 2, 3, 2, 4, 1, 4, 1, 2, 3, 4};
 
     var res = combinations(tallocator, mulOne32, &A, 2) catch unreachable;
     defer res.deinit();
