@@ -459,46 +459,6 @@ fn mulOne1 (a: u1) u1 {
     return a * 1;
 }
 
-pub fn HashSet(comptime T: type) type {
-    return struct {
-        set: std.AutoHashMap(T, void),
-        len: usize,
-        allocat: *mem.Allocator,
-
-        const Self = @This();
-
-        pub fn init(alloc: *mem.Allocator) Self {
-            return Self {
-                .set = std.AutoHashMap(T, void).init(alloc),
-                .len = 0,
-                .allocat = alloc,
-            };
-        }
-
-        pub fn deinit(self: *Self) void {
-            self.set.deinit();
-        }
-
-        pub fn contains(self: *Self, elem: T) bool {
-            return self.set.contains(elem);
-        }
-
-        pub fn put(self: *Self, elem: T) !void {
-            if ( !self.set.contains(elem) ) {
-                try self.set.put(elem, .{});
-            }
-        }
-
-        pub fn count(self: *Self) usize {
-            return self.len;
-        }
-
-        pub fn iterator(self: *const Self) std.AutoHashMap(T, void).Iterator {
-            return self.set.iterator();
-        }
-    };
-}
-
 pub fn combinations(
     allocat: *std.mem.Allocator,
     comptime func: anytype, 
@@ -537,35 +497,40 @@ pub fn combinations(
     var res = permutations(allocat, mulOne1, c) catch unreachable;
     defer res.deinit();
 
-    var bufset = HashSet(u8).init(allocat);
+    var bufset = std.StringHashMap(void).init(allocat);
     defer bufset.deinit();
-    var buffer: u8 = 0x00;
+    var buffer = std.ArrayList(u8).init(allocat);
+    defer buffer.deinit();
+    try buffer.ensureCapacity(N);
+    
     i = 0;
     while ( res.next() ) | item | {
         if ( (i != 0) and (i % N) == 0 ) {
-            try bufset.put( buffer );
-            buffer = 0x00;
+            if ( ! bufset.contains(buffer.items) ) {
+                try bufset.put( buffer.toOwnedSlice(), .{} );
+                try buffer.ensureCapacity(N);
+            } else {
+                buffer.shrinkRetainingCapacity(0);
+            }
         }
-        buffer <<= 1;
-        buffer += (0x00 | item.*);
+        buffer.appendAssumeCapacity( @as(u8, (0x00|item.*) ) );
         i += 1;
     }
-
+    
 
     i = 0;
     var j: usize = 0;
     var bit: u8 = 0x01;
     var index: usize = 0;
     var it = bufset.iterator();
-    while ( it.next() ) | item | {
+    while ( it.next() ) | buf | {
         j = 0;
-        bit = 0x01;
         while ( j < N ) {
-            if ( (bit & item.key) >= 1 ) {
+            if ( (bit & buf.key[j]) >= 1 ) {
                 ans[index] = func(iterable[j]);
+                // warn(" {},", .{ans[index]});
                 index += 1;
             }
-            bit <<=1;
             j += 1;
         }
         i += 1;
@@ -852,7 +817,7 @@ test "Combinations" {
     assertEqual(ans, 6);
     
     var A = [_]u32{1, 2, 3, 4};
-    var ans1 = [_]u32{2, 3, 2, 4, 1, 4, 3, 4, 1, 3, 1, 2};
+    var ans1 = [_]u32{2, 4, 1, 3, 1, 4, 1, 2, 2, 3, 3, 4};
 
     var res = combinations(tallocator, mulOne32, &A, 2) catch unreachable;
     defer res.deinit();
