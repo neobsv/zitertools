@@ -45,10 +45,10 @@ pub fn FunctionalIterator(comptime T: type) type {
         }
 
         pub fn init(alloc: *std.mem.Allocator, iter: []const T) Self {
-            const temp: []T = alloc.dupe(T, iter) catch unreachable;
+            //const temp: []T = alloc.dupe(T, iter) catch unreachable;
             return Self{
                 .allocator = alloc,
-                .items = temp,
+                .items = iter,
                 .len = iter.len
             };
         }
@@ -76,7 +76,7 @@ pub fn map(
 ) FunctionalIterator(@typeInfo(@TypeOf(func)).Fn.args[0].arg_type.?) {
     const rtype = @typeInfo(@TypeOf(func)).Fn.args[0].arg_type.?;
     var ans: []rtype  = allocat.alloc(rtype, iterable.len) catch unreachable;
-    defer allocat.destroy(ans.ptr);
+    errdefer allocat.destroy(ans.ptr);
     
     for(iterable) | item, i | {
         ans[i] =  func(item);
@@ -96,7 +96,7 @@ pub fn filter(
 ) FunctionalIterator(@typeInfo(@TypeOf(func)).Fn.args[0].arg_type.?) {
     const rtype = @typeInfo(@TypeOf(func)).Fn.args[0].arg_type.?;
     var ans: []rtype  = allocat.alloc(rtype, iterable.len) catch unreachable;
-    defer allocat.destroy(ans.ptr);
+    errdefer allocat.destroy(ans.ptr);
     
     var j: usize = 0;
     for (iterable) | item | {
@@ -127,7 +127,7 @@ pub fn accumulate(
 ) FunctionalIterator(@typeInfo(@TypeOf(func)).Fn.return_type.?) {
     const rtype = @typeInfo(@TypeOf(func)).Fn.return_type.?;
     var ans: []rtype  = allocat.alloc(rtype, iterable.len) catch unreachable;
-    defer allocat.destroy(ans.ptr);
+    errdefer allocat.destroy(ans.ptr);
     
     var i: usize = 0;
     ans[0] = func(init, iterable[0]);
@@ -156,7 +156,7 @@ pub fn chain(
     for (iterables) | iterable | { totalLength += iterable.len; }
     const rtype = @typeInfo(@TypeOf(func)).Fn.return_type.?;
     var ans: []rtype  = allocat.alloc(rtype, totalLength) catch unreachable;
-    defer allocat.destroy(ans.ptr);
+    errdefer allocat.destroy(ans.ptr);
 
     var index: usize = 0;
     for (iterables) | iterable | {
@@ -219,7 +219,7 @@ pub fn filterfalse(
 ) FunctionalIterator(@typeInfo(@TypeOf(func)).Fn.args[0].arg_type.?) {
     const rtype = @typeInfo(@TypeOf(func)).Fn.args[0].arg_type.?;
     var ans: []rtype  = allocat.alloc(rtype, iterable.len) catch unreachable;
-    defer allocat.destroy(ans.ptr);
+    errdefer allocat.destroy(ans.ptr);
     
     var j: usize = 0;
     for (iterable) | item, i | {
@@ -243,7 +243,7 @@ pub fn dropwhile(
     var totalLength: usize = iterable.len;
     const rtype = @typeInfo(@TypeOf(func)).Fn.args[0].arg_type.?;
     var ans: []rtype  = allocat.alloc(rtype, totalLength) catch unreachable;
-    defer allocat.destroy(ans.ptr);
+    errdefer allocat.destroy(ans.ptr);
 
     var i: usize = 0;
     while ( func(iterable[i]) == true ) : ( i += 1 ) {}
@@ -267,7 +267,7 @@ pub fn takewhile(
     var totalLength: usize = iterable.len;
     const rtype = @typeInfo(@TypeOf(func)).Fn.args[0].arg_type.?;
     var ans: []rtype  = allocat.alloc(rtype, totalLength) catch unreachable;
-    defer allocat.destroy(ans.ptr);
+    errdefer allocat.destroy(ans.ptr);
 
     var i: usize = 0;
     while ( func(iterable[i]) == true ) : ( i += 1 ) {
@@ -314,7 +314,7 @@ pub fn powerset(
     const allocatLength: usize = recurranceRelation(iterable.len) catch unreachable;
     const rtype = @typeInfo(@TypeOf(func)).Fn.args[0].arg_type.?;
     var ans: []rtype  = allocat.alloc(rtype, allocatLength) catch unreachable;
-    defer allocat.free(ans);
+    errdefer allocat.free(ans);
 
     var index: usize = 0;
     var i: usize = 0;
@@ -365,7 +365,7 @@ pub fn permutations_lex(
     const allocatLength: usize = @intCast(usize, fact(N) * N);
     const rtype = @typeInfo(@TypeOf(func)).Fn.args[0].arg_type.?;
     var ans: []rtype  = allocat.alloc(rtype, allocatLength) catch unreachable;
-    defer allocat.free(ans);
+    errdefer allocat.free(ans);
 
     var index: usize = 0;
     for (iterable) | item | {
@@ -414,7 +414,7 @@ pub fn permutations(
     const allocatLength: usize = @intCast(usize, fact(N) * N);
     const rtype = @typeInfo(@TypeOf(func)).Fn.args[0].arg_type.?;
     var ans: []rtype  = allocat.alloc(rtype, allocatLength) catch unreachable;
-    defer allocat.free(ans);
+    errdefer allocat.free(ans);
 
     var c: []usize = allocat.alloc(usize, N) catch unreachable;
     defer allocat.free(c);
@@ -478,7 +478,7 @@ pub fn combinations(
     const allocatLength: usize = @intCast(usize, ( fact(N) / (fact(k) * fact(N-k)) ) * k);
     const rtype = @typeInfo(@TypeOf(func)).Fn.args[0].arg_type.?;
     var ans: []rtype  = allocat.alloc(rtype, allocatLength) catch unreachable;
-    defer allocat.free(ans);
+    errdefer allocat.free(ans);
 
     var c: []u1 = allocat.alloc(u1, N) catch unreachable;
     defer allocat.free(c);
@@ -554,7 +554,7 @@ pub fn compress(
     const N: usize =  iterable.len;
     const rtype = @typeInfo(@TypeOf(func)).Fn.args[0].arg_type.?;
     var ans: []rtype  = allocat.alloc(rtype, N) catch unreachable;
-    defer allocat.destroy(ans.ptr);
+    errdefer allocat.destroy(ans.ptr);
 
     var i: usize = 0;
     var index: usize = 0;
@@ -589,7 +589,7 @@ pub fn product(
         _ = try indices.append(0);
     }
     var ans: []T  = allocat.alloc(T, totalLength*N) catch unreachable;
-    defer allocat.destroy(ans.ptr);
+    errdefer allocat.destroy(ans.ptr);
 
     var i: usize = 0;
     var j: usize = 0;
@@ -632,7 +632,7 @@ test "Reduce" {
 test "FunctionalIterator" {
 
     var A: []u8 = tallocator.alloc(u8, 10) catch unreachable;
-    defer tallocator.destroy(A.ptr);
+    errdefer tallocator.destroy(A.ptr);
 
     var i: u8 = 0;
     while ( i < 10 ) : ( i += 1 ) {
@@ -646,14 +646,18 @@ test "FunctionalIterator" {
     var B = std.ArrayList(u8).init(tallocator);
     defer B.deinit();
 
-    i =  0;
+    i = 0;
     while ( i < 10 ) : ( i += 1 ) {
         _ = try B.append(i*2);
-    } 
-    var iter2 = FunctionalIterator(u8).init(tallocator, B.items);
+    }
+
+    var its: []u8 = B.toOwnedSlice();
+    errdefer tallocator.free(its);
+ 
+    var iter2 = FunctionalIterator(u8).init(tallocator, its);
     defer iter2.deinit();
 
-    printTest(u8, &iter2, B.items);
+    printTest(u8, &iter2, its);
     warn("\r\n", .{});
 
 }

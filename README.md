@@ -9,6 +9,8 @@ And of course, their compile time counterparts!
 
 Suggestions and contributions are welcome.
 
+NOTE: De-initializing the iterator is the responsibility of the user.
+
 ## Generic Iterator
 
 ## Iterators
