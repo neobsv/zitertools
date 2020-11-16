@@ -45,8 +45,6 @@ Suggestions and contributions are welcome.
 
 ### Combinations
 
-#### Generate from powerset => too slow
-
 #### Generate from permutations
 
 #### Twiddle
