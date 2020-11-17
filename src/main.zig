@@ -45,7 +45,6 @@ pub fn FunctionalIterator(comptime T: type) type {
         }
 
         pub fn init(alloc: *std.mem.Allocator, iter: []const T) Self {
-            //const temp: []T = alloc.dupe(T, iter) catch unreachable;
             return Self{
                 .allocator = alloc,
                 .items = iter,
@@ -62,8 +61,6 @@ pub fn FunctionalIterator(comptime T: type) type {
 fn printTest(comptime T: type, iter: *FunctionalIterator(T), ans: []T) void{
     var i: usize = 0;
     while (iter.next()) | item | {
-        //warn("\r\n ans: {} item: {} ", .{ans[i], item.*});
-        //warn("{} \n", .{item.*});
         assertEqual(ans[i], item.*);
         i += 1;
     }
@@ -865,7 +862,7 @@ test "Cartesian Product" {
 
 
 pub fn main() !void {
-    var A2 = [_]u32{1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12};
+    var A2 = [_]u32{1, 2, 3, 4, 5, 6, 7, 8, 9, 10};
     var res1 = permutations(tallocator, mulOne32, &A2) catch unreachable;
     defer res1.deinit();
     warn("\r\n", .{});
