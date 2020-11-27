@@ -1,5 +1,8 @@
 # Zig itertools
 
+[![travis](https://travis-ci.org/onebsv1/zigraph.svg?branch=master)](https://travis-ci.org/github/onebsv1/zigraph)
+[![zig070](https://img.shields.io/badge/zig-0.7.0-orange)](https://ziglang.org/)
+
 This is an attempt to port the itertools library from python to zig, in order to introduce a functional
 paradigm to the language. Maintains efficiency by reducing temporary allocations, and moving through 
 slices using an iterator. The library also includes some constructs such as map, filter and reduce which 

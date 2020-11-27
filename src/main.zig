@@ -862,7 +862,7 @@ test "Cartesian Product" {
 
 
 pub fn main() !void {
-    var A2 = [_]u32{1, 2, 3, 4, 5, 6, 7, 8, 9, 10};
+    var A2 = [_]u32{1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15 };
     var res1 = permutations(tallocator, mulOne32, &A2) catch unreachable;
     defer res1.deinit();
     warn("\r\n", .{});
